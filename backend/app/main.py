@@ -2,6 +2,7 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
 
+from backend.app.evaluation.audit_logger import AuditLogger
 from backend.app.policies.policy_engine import PolicyEngine
 
 
@@ -12,6 +13,7 @@ app = FastAPI(
 )
 
 policy_engine = PolicyEngine()
+audit_logger = AuditLogger()
 
 
 class ActionRequest(BaseModel):
@@ -39,6 +41,13 @@ def evaluate_action(request: ActionRequest):
     decision = policy_engine.evaluate(
         agent=request.agent,
         action=request.action,
+    )
+
+    audit_logger.log(
+        agent=request.agent,
+        action=request.action,
+        allowed=decision.allowed,
+        reason=decision.reason,
     )
 
     return {
