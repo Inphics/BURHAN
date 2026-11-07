@@ -22,3 +22,10 @@ frontend/dist/
 # Editor and operating system files
 .DS_Store
 Thumbs.db
+
+# Local audit databases
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
