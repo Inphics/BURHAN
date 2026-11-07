@@ -5,17 +5,15 @@
 
 **Every action accountable. Every decision verifiable.**
 
-BURHAN is an open-source Python framework prototype for evaluating AI agent actions against defined security policies and recording the resulting decisions in a persistent audit log.
+BURHAN is an independently developed Python framework prototype for evaluating AI agent actions against defined security policies and recording the resulting decisions in a persistent audit log.
 
 The project explores how AI agent systems can become more transparent, accountable, and easier to inspect.
+
+> **Project Notice:** BURHAN is a proprietary research and development project made publicly visible for portfolio demonstration and technical review. It is not open-source software, and no general license to use, modify, or redistribute its source code is granted. See [Copyright and Usage](#copyright-and-usage).
 
 ## Why BURHAN?
 
 The name **BURHAN** originates from the Arabic word **بُرْهَان (burhān)**, meaning *proof*, *evidence*, or *clear demonstration*. Adopted into Turkish as **Burhan**, where it is also used as a personal name, the word preserves its original association with evidence, certainty, and the demonstration of truth. This shared Arabic–Turkish linguistic heritage reflects the project's central philosophy: that trust should be supported by evidence, and every decision should be open to examination.
-
-This shared linguistic heritage reflects the project's central philosophy:
-
-**Every action accountable. Every decision verifiable.**
 
 BURHAN is built around the idea that trustworthy AI systems should produce more than decisions. They should provide understandable reasons, enforceable boundaries, and inspectable records of their behavior.
 
@@ -33,11 +31,17 @@ The name represents the project's long-term ambition: moving from simply trustin
 
 ## Project Status
 
-**Status: Early-stage backend prototype**
+**Status: Early-stage backend prototype | Public portfolio demonstration | All rights reserved**
 
-BURHAN currently provides policy evaluation and persistent audit logging. It does not yet authenticate agents, enforce decisions on external tools, or provide tamper-proof audit records.
+BURHAN is currently under active research and development.
 
-It is intended for development, experimentation, and learning—not production security enforcement.
+This repository is publicly accessible to demonstrate the project's architecture, implementation, testing practices, and technical progress. Its publication is intended for portfolio presentation and professional evaluation.
+
+BURHAN currently provides permission-based policy evaluation and persistent audit logging. It does not yet authenticate agents, enforce decisions on external tools, or provide tamper-proof audit records.
+
+The framework is not production-ready and should not be relied upon to secure real-world AI agent systems.
+
+**Public availability does not constitute permission to use, modify, redistribute, or incorporate the source code into other projects.**
 
 ## Architecture
 
@@ -93,14 +97,17 @@ When an API client submits an evaluation request, BURHAN:
 
 **Security note:** BURHAN currently evaluates requested actions but does not execute or intercept external agent tools. Agent identities are supplied by API clients and are not authenticated.
 
+## Technical Setup and Development Reference
 
-## Installation and Quick Start
+> **Usage restriction:** The following instructions document the project's technical setup for transparency and professional evaluation. They do not grant permission to use, modify, or redistribute the software. See [Copyright and Usage](#copyright-and-usage).
 
 ### Prerequisites
 
 - Python 3.11 or newer
 - Git
-- A terminal (Linux, macOS, Windows, or GitHub Codespaces)
+- A terminal
+
+Development and testing have primarily been performed in GitHub Codespaces. Other environments may require adjustments.
 
 ### 1. Clone the Repository
 
@@ -139,15 +146,15 @@ python -m pip install -r backend/requirements.txt
 python -m uvicorn backend.app.main:app --reload
 ```
 
-The API will be available at:
+By default, the API runs locally at:
 
-- API: http://127.0.0.1:8000
-- Interactive API documentation: http://127.0.0.1:8000/docs
-- Health check: http://127.0.0.1:8000/health
+- API: `http://127.0.0.1:8000`
+- Interactive API documentation: `http://127.0.0.1:8000/docs`
+- Health check: `http://127.0.0.1:8000/health`
 
 ### 5. Evaluate an Agent Action
 
-Open another terminal and run:
+Example request:
 
 ```bash
 curl -X POST http://127.0.0.1:8000/evaluate \
@@ -180,18 +187,17 @@ The current test suite contains 17 tests covering policy evaluation, permission 
 
 The `GET /audit` endpoint is disabled by default.
 
-For local development only, start the API with audit inspection enabled:
+For local development, audit inspection can be enabled with:
 
 ```bash
 BURHAN_ENABLE_AUDIT_API=true python -m uvicorn backend.app.main:app --reload
 ```
 
-Then visit:
+Audit records can then be inspected at:
 
-http://127.0.0.1:8000/audit
+`http://127.0.0.1:8000/audit`
 
-**Warning:** This configuration does not provide authentication. Anyone with network access to the enabled endpoint can read audit records. Use it only in a trusted local development environment. Keep Codespaces forwarded ports private.
-
+**Warning:** This configuration does not provide authentication. Anyone with network access to the enabled endpoint can read audit records. It should only be used in a trusted local development environment. GitHub Codespaces forwarded ports should remain private.
 
 ## API Reference
 
@@ -201,8 +207,12 @@ BURHAN exposes four HTTP endpoints through FastAPI.
 |--------|----------|-------------|
 | `GET` | `/` | Returns basic project information and API status. |
 | `GET` | `/health` | Returns the application's health status. |
-| `POST` | `/evaluate` | Evaluates an agent's requested action against the policy engine and records the decision. |
+| `POST` | `/evaluate` | Evaluates an agent's requested action and records the decision. |
 | `GET` | `/audit` | Retrieves stored audit events when explicitly enabled. Disabled by default. |
+
+### GET /
+
+Returns basic information about the BURHAN API, including the project name, version, and application status.
 
 ### GET /health
 
@@ -297,7 +307,6 @@ FastAPI automatically generates interactive API documentation:
 
 These pages describe the API's request and response structures.
 
-
 ## Security Model and Known Limitations
 
 BURHAN is an experimental AI agent safety framework focused on policy evaluation, decision transparency, and auditability.
@@ -343,14 +352,17 @@ Permissions are currently defined in Python code and are not managed through a p
 
 The prototype does not yet include comprehensive monitoring, database backup and recovery, or production deployment controls.
 
-### Intended Use
+### Intended Purpose
 
-BURHAN is suitable for:
+BURHAN is currently intended for:
 
-- Learning about AI agent security architecture.
-- Experimenting with permission-based policy evaluation.
+- Portfolio demonstration and professional evaluation.
+- Research into AI agent security architecture.
+- Exploring permission-based policy evaluation.
 - Demonstrating persistent decision auditing.
-- Developing and testing future safety mechanisms.
+- Developing and testing future safety mechanisms within the project.
+
+These descriptions explain the project's purpose and do not grant third parties permission to use the software.
 
 BURHAN should not currently be used as the sole security boundary for production AI agents or sensitive systems.
 
@@ -358,8 +370,7 @@ BURHAN should not currently be used as the sole security boundary for production
 
 Future improvements will prioritize authenticated agent identities, stronger policy enforcement, protected audit access, and more robust verification mechanisms.
 
-Security-related contributions and responsible vulnerability reports are welcome.
-
+Security concerns may be reported to the repository owner through an appropriate private communication channel.
 
 ## Development Roadmap
 
@@ -380,13 +391,13 @@ BURHAN is being developed incrementally, with an emphasis on clear architecture,
 ### Phase 2 — Documentation and Backend Hardening (In Progress)
 
 - [x] Document the framework's purpose and architecture.
-- [x] Add installation and API usage instructions.
+- [x] Add technical setup and API reference documentation.
 - [x] Document the security model and known limitations.
 - [ ] Expand automated tests for edge cases and failure scenarios.
 - [ ] Improve audit database configuration and query limits.
 - [ ] Introduce authenticated access to sensitive API functionality.
 - [ ] Add structured error handling and operational safeguards.
-- [ ] Prepare a documented backend release.
+- [ ] Prepare a documented backend prototype release.
 
 ### Phase 3 — Agent Integration and Verification (Planned)
 
@@ -410,3 +421,27 @@ BURHAN aims to evolve into a framework that helps developers evaluate, constrain
 The long-term goal is to make agent actions more accountable through enforceable policies, reliable audit records, and stronger verification mechanisms.
 
 Features listed as planned are not yet implemented.
+
+## Copyright and Usage
+
+**Copyright © 2026. All rights reserved.**
+
+BURHAN is a proprietary software research and development project made publicly visible for portfolio demonstration and technical review.
+
+**No software license is currently granted.**
+
+Except for activities permitted by applicable law or GitHub's Terms of Service, no permission is granted to:
+
+- Use or incorporate the source code into other software or commercial products.
+- Modify, adapt, or create derivative works from the source code.
+- Redistribute, republish, sublicense, or commercially exploit the source code.
+
+Any use beyond these permissions requires prior written authorization from the copyright holder.
+
+Public availability on GitHub does not mean that BURHAN is open-source software.
+
+The project may be licensed under different terms in the future. Until such terms are explicitly published, all rights remain reserved.
+
+### Disclaimer
+
+BURHAN is experimental software provided for demonstration purposes. No warranty is made regarding its reliability, security, or suitability for any particular purpose.
