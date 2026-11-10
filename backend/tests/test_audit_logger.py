@@ -56,3 +56,36 @@ def test_audit_events_survive_database_reconnection(tmp_path):
     assert saved_events[0]["action"] == "delete"
     assert saved_events[0]["allowed"] is False
     assert saved_events[0]["reason"] == "Permission denied"
+
+
+def test_audit_database_uses_environment_variable(tmp_path, monkeypatch):
+    custom_database_path = tmp_path / "custom_audit.db"
+
+    monkeypatch.setenv(
+        "BURHAN_AUDIT_DB_PATH",
+        str(custom_database_path),
+    )
+
+    database = AuditDatabase()
+
+    assert database.db_path == custom_database_path
+    assert custom_database_path.exists()
+
+
+def test_audit_database_respects_event_limit(tmp_path):
+    database = AuditDatabase(tmp_path / "limited_audit.db")
+
+    for number in range(5):
+        database.save_event(
+            timestamp=f"2026-01-01T00:00:0{number}+00:00",
+            agent="research_agent",
+            action="read",
+            allowed=True,
+            reason=f"Test event {number}",
+        )
+
+    events = database.get_events(limit=2)
+
+    assert len(events) == 2
+    assert events[0]["reason"] == "Test event 4"
+    assert events[1]["reason"] == "Test event 3"

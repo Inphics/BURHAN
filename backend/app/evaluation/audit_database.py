@@ -1,12 +1,20 @@
 
 import sqlite3
+import os
 from pathlib import Path
 
 
 class AuditDatabase:
-    def __init__(self, db_path="burhan_audit.db"):
+    def __init__(self, db_path=None):
+        if db_path is None:
+            db_path = os.getenv(
+                "BURHAN_AUDIT_DB_PATH",
+                "burhan_audit.db",
+            )
+
         self.db_path = Path(db_path)
         self.create_tables()
+
 
     def create_tables(self):
         with sqlite3.connect(self.db_path) as connection:
@@ -39,22 +47,19 @@ class AuditDatabase:
                 (timestamp, agent, action, int(allowed), reason),
             )
     
-    def get_events(self):
+    
+    def get_events(self, limit=100):
         with sqlite3.connect(self.db_path) as connection:
             connection.row_factory = sqlite3.Row
 
             cursor = connection.execute(
                 """
-                SELECT
-                    id,
-                    timestamp,
-                    agent,
-                    action,
-                    allowed,
-                    reason
+                SELECT id, timestamp, agent, action, allowed, reason
                 FROM audit_events
                 ORDER BY id DESC
-                """
+                LIMIT ?
+                """,
+                (limit,),
             )
 
             return [
@@ -68,3 +73,4 @@ class AuditDatabase:
                 }
                 for row in cursor.fetchall()
             ]
+

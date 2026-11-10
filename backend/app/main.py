@@ -1,7 +1,7 @@
 
 import os
 
-from fastapi import HTTPException
+from fastapi import FastAPI, HTTPException, Query
 
 from fastapi import FastAPI
 from pydantic import BaseModel
@@ -62,17 +62,18 @@ def evaluate_action(request: ActionRequest):
 
 
 @app.get("/audit")
-def get_audit_events():
+def get_audit_events(limit: int = Query(default=100, ge=1, le=100)):
     if os.getenv("BURHAN_ENABLE_AUDIT_API") != "true":
         raise HTTPException(
             status_code=403,
             detail="Audit inspection is disabled.",
         )
 
-    events = audit_logger.database.get_events()
+    events = audit_logger.database.get_events(limit=limit)
 
     return {
         "total_events": len(events),
         "events": events,
     }
+
 
