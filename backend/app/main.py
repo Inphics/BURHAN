@@ -1,7 +1,9 @@
 
 import os
+import hmac
 
-from fastapi import FastAPI, HTTPException, Query
+
+from fastapi import FastAPI, HTTPException, Query, Header
 
 from fastapi import FastAPI
 from pydantic import BaseModel
@@ -62,11 +64,30 @@ def evaluate_action(request: ActionRequest):
 
 
 @app.get("/audit")
-def get_audit_events(limit: int = Query(default=100, ge=1, le=100)):
+def get_audit_events(
+    limit: int = Query(default=100, ge=1, le=100),
+    x_api_key: str | None = Header(default=None),
+):
     if os.getenv("BURHAN_ENABLE_AUDIT_API") != "true":
         raise HTTPException(
             status_code=403,
             detail="Audit inspection is disabled.",
+        )
+
+    expected_api_key = os.getenv("BURHAN_AUDIT_API_KEY")
+
+    if not expected_api_key:
+        raise HTTPException(
+            status_code=403,
+            detail="Audit API key is not configured.",
+        )
+
+    if not x_api_key or not hmac.compare_digest(
+        x_api_key, expected_api_key
+    ):
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid or missing API key.",
         )
 
     events = audit_logger.database.get_events(limit=limit)
@@ -75,5 +96,6 @@ def get_audit_events(limit: int = Query(default=100, ge=1, le=100)):
         "total_events": len(events),
         "events": events,
     }
+
 
 

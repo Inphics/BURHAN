@@ -57,6 +57,7 @@ def test_audit_endpoint_disabled_by_default(monkeypatch):
 
 def test_audit_endpoint_returns_recorded_events(monkeypatch):
     monkeypatch.setenv("BURHAN_ENABLE_AUDIT_API", "true")
+    monkeypatch.setenv("BURHAN_AUDIT_API_KEY", "test-secret-key")
 
     client = TestClient(main.app)
 
@@ -68,7 +69,12 @@ def test_audit_endpoint_returns_recorded_events(monkeypatch):
         },
     )
 
-    response = client.get("/audit")
+    
+    response = client.get(
+        "/audit",
+        headers={"X-API-Key": "test-secret-key"},
+    )
+
 
     assert response.status_code == 200
 
@@ -88,7 +94,9 @@ def test_audit_endpoint_returns_recorded_events(monkeypatch):
 
 def test_audit_api_accepts_valid_limit(monkeypatch):
     client = TestClient(app)
+
     monkeypatch.setenv("BURHAN_ENABLE_AUDIT_API", "true")
+    monkeypatch.setenv("BURHAN_AUDIT_API_KEY", "test-secret-key")
 
     for number in range(5):
         client.post(
@@ -99,7 +107,11 @@ def test_audit_api_accepts_valid_limit(monkeypatch):
             },
         )
 
-    response = client.get("/audit?limit=2")
+    response = client.get(
+        "/audit",
+        params={"limit": 2},
+        headers={"X-API-Key": "test-secret-key"},
+    )
 
     assert response.status_code == 200
 
@@ -112,11 +124,61 @@ def test_audit_api_accepts_valid_limit(monkeypatch):
 def test_audit_api_rejects_invalid_limits(monkeypatch):
     client = TestClient(app)
     monkeypatch.setenv("BURHAN_ENABLE_AUDIT_API", "true")
+    monkeypatch.setenv("BURHAN_AUDIT_API_KEY", "test-secret-key")
 
     for invalid_limit in [0, -1, 101, 500]:
         response = client.get(
             "/audit",
             params={"limit": invalid_limit},
+            headers={"X-API-Key": "test-secret-key"},
         )
 
         assert response.status_code == 422
+
+
+def test_audit_api_requires_valid_api_key(monkeypatch):
+    client = TestClient(app)
+
+    monkeypatch.setenv("BURHAN_ENABLE_AUDIT_API", "true")
+    monkeypatch.setenv(
+        "BURHAN_AUDIT_API_KEY",
+        "test-secret-key",
+    )
+
+    # Request without an API key
+    response = client.get("/audit")
+    assert response.status_code == 401
+
+    # Request with an incorrect API key
+    response = client.get(
+        "/audit",
+        headers={"X-API-Key": "wrong-key"},
+    )
+    assert response.status_code == 401
+
+    # Request with the correct API key
+    response = client.get(
+        "/audit",
+        headers={"X-API-Key": "test-secret-key"},
+    )
+    assert response.status_code == 200
+
+
+def test_audit_api_disabled_even_with_valid_key(monkeypatch):
+    client = TestClient(app)
+
+    monkeypatch.delenv(
+        "BURHAN_ENABLE_AUDIT_API",
+        raising=False,
+    )
+    monkeypatch.setenv(
+        "BURHAN_AUDIT_API_KEY",
+        "test-secret-key",
+    )
+
+    response = client.get(
+        "/audit",
+        headers={"X-API-Key": "test-secret-key"},
+    )
+
+    assert response.status_code == 403
