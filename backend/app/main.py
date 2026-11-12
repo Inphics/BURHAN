@@ -3,6 +3,7 @@ import os
 import hmac
 
 
+from backend.app.security.agent_auth import authenticate_agent
 from fastapi import FastAPI, HTTPException, Query, Header
 
 from fastapi import FastAPI
@@ -23,7 +24,6 @@ audit_logger = AuditLogger()
 
 
 class ActionRequest(BaseModel):
-    agent: str
     action: str
 
 
@@ -42,15 +42,27 @@ def health():
     return {"status": "healthy"}
 
 
+
 @app.post("/evaluate")
-def evaluate_action(request: ActionRequest):
+def evaluate_action(
+    request: ActionRequest,
+    x_api_key: str | None = Header(default=None),
+):
+    agent = authenticate_agent(x_api_key)
+
+    if agent is None:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid or missing agent API key.",
+        )
+
     decision = policy_engine.evaluate(
-        agent=request.agent,
+        agent=agent,
         action=request.action,
     )
 
     audit_logger.log(
-        agent=request.agent,
+        agent=agent,
         action=request.action,
         allowed=decision.allowed,
         reason=decision.reason,

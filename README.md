@@ -226,49 +226,71 @@ Example response:
 }
 ```
 
+
 ### POST /evaluate
 
-Evaluates whether an agent is permitted to perform a requested action.
+Evaluates whether an authenticated agent is permitted to perform a requested action.
 
-Example request:
+BURHAN identifies the agent using an API key supplied in the `X-API-Key` HTTP header. The agent identity is not supplied in the JSON request body.
+
+**Authentication header:**
+
+```http
+X-API-Key: YOUR_AGENT_API_KEY
+```
+
+**Example request body:**
 
 ```json
 {
-  "agent": "research_agent",
   "action": "read"
 }
 ```
 
-Example response:
+**Example request using curl:**
+
+```bash
+curl -X POST http://127.0.0.1:8000/evaluate \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: YOUR_AGENT_API_KEY" \
+  -d '{"action": "read"}'
+```
+
+Replace `YOUR_AGENT_API_KEY` with the key configured for the agent.
+
+**Agent authentication configuration:**
+
+- `BURHAN_RESEARCH_AGENT_KEY` — API key for `research_agent`
+- `BURHAN_ADMIN_AGENT_KEY` — API key for `admin_agent`
+
+**Expected behavior:**
+
+- Missing or invalid API key: HTTP `401 Unauthorized`.
+- Valid research agent key requesting `read`: HTTP `200`, with `allowed: true`.
+- Valid research agent key requesting `delete`: HTTP `200`, with `allowed: false`.
+- Valid admin agent key requesting `delete`: HTTP `200`, with `allowed: true`.
+
+**Example response:**
 
 ```json
 {
   "allowed": true,
-  "reason": "Agent 'research_agent' is permitted to perform 'read'."
+  "reason": "Action permitted"
 }
 ```
 
-Example denied request:
+The exact `reason` text depends on the policy engine's decision.
 
-```json
-{
-  "agent": "research_agent",
-  "action": "delete"
-}
-```
+**Security notes:**
 
-Example response:
+- Agent API keys must be configured through environment variables.
+- Never commit real API keys to GitHub.
+- Use HTTPS when sending API keys over a network.
+- BURHAN authenticates the caller's possession of an agent key, then checks that agent's permissions.
+- Authenticated policy decisions are recorded in the SQLite audit database.
+- BURHAN evaluates requested actions but does not execute them.
+- API-key authentication is a prototype security mechanism, not a complete production identity system.
 
-```json
-{
-  "allowed": false,
-  "reason": "Agent 'research_agent' is not permitted to perform 'delete'."
-}
-```
-
-Both permitted and denied decisions are recorded in the audit database.
-
-**Note:** A denied policy decision currently returns HTTP 200 with `"allowed": false`. The endpoint evaluates actions; it does not execute them.
 
 ### GET /audit
 

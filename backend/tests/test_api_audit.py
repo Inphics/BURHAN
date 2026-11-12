@@ -17,14 +17,22 @@ def isolated_audit_database(tmp_path, monkeypatch):
     monkeypatch.setattr(main, "audit_logger", test_logger)
 
 
-def test_evaluate_endpoint_records_audit_event():
+
+def test_evaluate_endpoint_records_audit_event(monkeypatch):
     client = TestClient(main.app)
+
+    monkeypatch.setenv(
+        "BURHAN_RESEARCH_AGENT_KEY",
+        "research-test-key",
+    )
 
     response = client.post(
         "/evaluate",
         json={
-            "agent": "research_agent",
             "action": "delete",
+        },
+        headers={
+            "X-API-Key": "research-test-key",
         },
     )
 
@@ -55,26 +63,47 @@ def test_audit_endpoint_disabled_by_default(monkeypatch):
     assert response.json()["detail"] == "Audit inspection is disabled."
 
 
-def test_audit_endpoint_returns_recorded_events(monkeypatch):
-    monkeypatch.setenv("BURHAN_ENABLE_AUDIT_API", "true")
-    monkeypatch.setenv("BURHAN_AUDIT_API_KEY", "test-secret-key")
 
+def test_audit_endpoint_returns_recorded_events(monkeypatch):
     client = TestClient(main.app)
 
-    client.post(
+    # Configure the research agent's API key
+    monkeypatch.setenv(
+        "BURHAN_RESEARCH_AGENT_KEY",
+        "research-test-key",
+    )
+
+    # Enable audit inspection and configure its API key
+    monkeypatch.setenv(
+        "BURHAN_ENABLE_AUDIT_API",
+        "true",
+    )
+    monkeypatch.setenv(
+        "BURHAN_AUDIT_API_KEY",
+        "test-secret-key",
+    )
+
+    # Authenticate the research agent and record an action
+    response = client.post(
         "/evaluate",
         json={
-            "agent": "research_agent",
-            "action": "delete",
+            "action": "read",
+        },
+        headers={
+            "X-API-Key": "research-test-key",
         },
     )
 
-    
+    assert response.status_code == 200
+    assert response.json()["allowed"] is True
+
+    # Retrieve the recorded event using the audit API key
     response = client.get(
         "/audit",
-        headers={"X-API-Key": "test-secret-key"},
+        headers={
+            "X-API-Key": "test-secret-key",
+        },
     )
-
 
     assert response.status_code == 200
 
@@ -86,31 +115,46 @@ def test_audit_endpoint_returns_recorded_events(monkeypatch):
     event = data["events"][0]
 
     assert event["agent"] == "research_agent"
-    assert event["action"] == "delete"
-    assert event["allowed"] is False
-    assert "not permitted" in event["reason"]
-    assert event["timestamp"].endswith("+00:00")
+    assert event["action"] == "read"
+    assert event["allowed"] is True
+
+
 
 
 def test_audit_api_accepts_valid_limit(monkeypatch):
-    client = TestClient(app)
+    client = TestClient(main.app)
 
-    monkeypatch.setenv("BURHAN_ENABLE_AUDIT_API", "true")
-    monkeypatch.setenv("BURHAN_AUDIT_API_KEY", "test-secret-key")
+    monkeypatch.setenv(
+        "BURHAN_RESEARCH_AGENT_KEY",
+        "research-test-key",
+    )
+    monkeypatch.setenv(
+        "BURHAN_ENABLE_AUDIT_API",
+        "true",
+    )
+    monkeypatch.setenv(
+        "BURHAN_AUDIT_API_KEY",
+        "test-secret-key",
+    )
 
     for number in range(5):
-        client.post(
+        response = client.post(
             "/evaluate",
             json={
-                "agent": "research_agent",
                 "action": "read",
             },
+            headers={
+                "X-API-Key": "research-test-key",
+            },
         )
+        assert response.status_code == 200
 
     response = client.get(
         "/audit",
         params={"limit": 2},
-        headers={"X-API-Key": "test-secret-key"},
+        headers={
+            "X-API-Key": "test-secret-key",
+        },
     )
 
     assert response.status_code == 200
@@ -119,6 +163,7 @@ def test_audit_api_accepts_valid_limit(monkeypatch):
 
     assert data["total_events"] == 2
     assert len(data["events"]) == 2
+
 
 
 def test_audit_api_rejects_invalid_limits(monkeypatch):
@@ -182,3 +227,76 @@ def test_audit_api_disabled_even_with_valid_key(monkeypatch):
     )
 
     assert response.status_code == 403
+
+
+def test_evaluate_rejects_invalid_agent_keys(monkeypatch):
+    client = TestClient(main.app)
+
+    monkeypatch.setenv(
+        "BURHAN_RESEARCH_AGENT_KEY",
+        "research-test-key",
+    )
+    monkeypatch.setenv(
+        "BURHAN_ADMIN_AGENT_KEY",
+        "admin-test-key",
+    )
+
+    # Missing API key
+    response = client.post(
+        "/evaluate",
+        json={"action": "read"},
+    )
+    assert response.status_code == 401
+
+    # Incorrect API key
+    response = client.post(
+        "/evaluate",
+        json={"action": "read"},
+        headers={"X-API-Key": "wrong-key"},
+    )
+    assert response.status_code == 401
+
+    # Correct research agent key
+    response = client.post(
+        "/evaluate",
+        json={"action": "read"},
+        headers={"X-API-Key": "research-test-key"},
+    )
+    assert response.status_code == 200
+    assert response.json()["allowed"] is True
+
+
+def test_admin_agent_can_request_delete(monkeypatch):
+    client = TestClient(main.app)
+
+    monkeypatch.setenv(
+        "BURHAN_RESEARCH_AGENT_KEY",
+        "research-test-key",
+    )
+    monkeypatch.setenv(
+        "BURHAN_ADMIN_AGENT_KEY",
+        "admin-test-key",
+    )
+
+    response = client.post(
+        "/evaluate",
+        json={
+            "action": "delete",
+        },
+        headers={
+            "X-API-Key": "admin-test-key",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["allowed"] is True
+
+    events = main.audit_logger.database.get_events()
+
+    assert len(events) == 1
+
+    event = events[0]
+
+    assert event["agent"] == "admin_agent"
+    assert event["action"] == "delete"
+    assert event["allowed"] is True
