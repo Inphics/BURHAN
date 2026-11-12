@@ -292,6 +292,67 @@ The exact `reason` text depends on the policy engine's decision.
 - API-key authentication is a prototype security mechanism, not a complete production identity system.
 
 
+### POST /enforce
+
+Authenticates an agent, evaluates its permissions, and simulates the
+requested action only when the policy allows it.
+
+**Authentication header:**
+
+```http
+X-API-Key: YOUR_AGENT_API_KEY
+```
+
+**Example request body:**
+
+```json
+{
+  "action": "read"
+}
+```
+
+**Example request using curl:**
+
+```bash
+curl -X POST http://127.0.0.1:8000/enforce \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: YOUR_AGENT_API_KEY" \
+  -d '{"action": "read"}'
+```
+
+Replace `YOUR_AGENT_API_KEY` with the API key configured for the agent.
+
+**Example response for an allowed action:**
+
+```json
+{
+  "allowed": true,
+  "executed": true,
+  "reason": "Action permitted",
+  "action": "read",
+  "message": "Action 'read' simulated successfully."
+}
+```
+
+The exact `reason` text depends on the policy engine.
+
+**Expected behavior:**
+
+- Missing or invalid API key: HTTP `401 Unauthorized`.
+- Research agent requesting `read`: allowed and simulated.
+- Research agent requesting `delete`: denied and not simulated.
+- Admin agent requesting `delete`: allowed and simulated.
+- Authenticated enforcement decisions are recorded in SQLite.
+
+**Security and execution limitations:**
+
+- BURHAN checks permissions before calling the action executor.
+- Denied actions never reach the executor.
+- `executed: true` means a simulation completed, not a real operation.
+- No real files are deleted, system settings changed, or external commands run.
+- This is an experimental enforcement prototype, not a production-ready sandbox.
+
+
 ### GET /audit
 
 Returns stored audit events in reverse insertion order.

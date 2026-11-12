@@ -8,7 +8,7 @@ from fastapi import FastAPI, HTTPException, Query, Header
 
 from fastapi import FastAPI
 from pydantic import BaseModel
-
+from backend.app.execution.enforcement_engine import EnforcementEngine
 from backend.app.evaluation.audit_logger import AuditLogger
 from backend.app.policies.policy_engine import PolicyEngine
 
@@ -21,7 +21,7 @@ app = FastAPI(
 
 policy_engine = PolicyEngine()
 audit_logger = AuditLogger()
-
+enforcement_engine = EnforcementEngine(policy_engine=policy_engine)
 
 class ActionRequest(BaseModel):
     action: str
@@ -108,6 +108,37 @@ def get_audit_events(
         "total_events": len(events),
         "events": events,
     }
+
+
+@app.post("/enforce")
+def enforce_action(
+    request: ActionRequest,
+    x_api_key: str | None = Header(default=None),
+):
+    # Identify the agent using its API key.
+    agent = authenticate_agent(x_api_key)
+
+    if agent is None:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid or missing agent API key.",
+        )
+
+    # Check permissions before simulating the action.
+    result = enforcement_engine.enforce(
+        agent=agent,
+        action=request.action,
+    )
+
+    # Record the verified agent and enforcement decision.
+    audit_logger.log(
+        agent=agent,
+        action=request.action,
+        allowed=result["allowed"],
+        reason=result["reason"],
+    )
+
+    return result
 
 
 
