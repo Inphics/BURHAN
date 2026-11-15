@@ -537,7 +537,7 @@ BURHAN is being developed incrementally, with an emphasis on clear architecture,
 - [x] Configure SQLite audit database paths and enforce API query limits.
 - [x] Introduce API-key authentication for agent evaluation and sensitive audit inspection.
 - [x] Add structured error handling and operational safeguards for tested authentication, enforcement, and audit failure scenarios.
-- [ ] Prepare a documented backend prototype release.
+- [x] Prepare a documented backend prototype release (v0.2.0).
 
 ### Phase 3 — Agent Integration and Verification (Planned)
 
