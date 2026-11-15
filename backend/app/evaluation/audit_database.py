@@ -55,9 +55,15 @@ class AuditDatabase:
                     """
                 )
 
-    
-    
-    
+            if "event_hmac" not in column_names:
+                connection.execute(
+                    """
+                    ALTER TABLE audit_events
+                    ADD COLUMN event_hmac TEXT
+                    """
+                )
+
+   
     def save_event(
         self,
         timestamp,
@@ -67,6 +73,7 @@ class AuditDatabase:
         reason,
         execution_status="not_attempted",
         request_id=None,
+        event_hmac=None,
     ):
         with sqlite3.connect(self.db_path) as connection:
             connection.execute(
@@ -78,8 +85,9 @@ class AuditDatabase:
                     allowed,
                     reason,
                     execution_status,
-                    request_id
-                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                    request_id,
+                    event_hmac
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     timestamp,
@@ -89,12 +97,10 @@ class AuditDatabase:
                     reason,
                     execution_status,
                     request_id,
+                    event_hmac,
                 ),
             )
 
-
-     
-    
     
     def get_events(self, limit=100):
         with sqlite3.connect(self.db_path) as connection:
@@ -110,7 +116,8 @@ class AuditDatabase:
                     allowed,
                     reason,
                     execution_status,
-                    request_id
+                    request_id,
+                    event_hmac
                 FROM audit_events
                 ORDER BY id DESC
                 LIMIT ?
@@ -128,8 +135,8 @@ class AuditDatabase:
                     "reason": row["reason"],
                     "execution_status": row["execution_status"],
                     "request_id": row["request_id"],
+                    "event_hmac": row["event_hmac"],
                 }
                 for row in cursor.fetchall()
             ]
-
 
