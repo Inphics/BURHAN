@@ -1,7 +1,7 @@
 
 import os
 import hmac
-
+from uuid import uuid4
 
 from backend.app.security.agent_auth import authenticate_agent
 from fastapi import FastAPI, HTTPException, Query, Header
@@ -125,6 +125,7 @@ def enforce_action(
             status_code=401,
             detail="Invalid or missing agent API key.",
         )
+    request_id = str(uuid4())
 
     # Record the request before attempting execution.
     try:
@@ -134,6 +135,7 @@ def enforce_action(
             allowed=False,
             reason="Enforcement requested; decision pending.",
             execution_status="not_attempted",
+            request_id=request_id,
         )
     except Exception:
         raise HTTPException(
@@ -162,6 +164,7 @@ def enforce_action(
             allowed=result["allowed"],
             reason=result["reason"],
             execution_status=execution_status,
+            request_id=request_id,
         )
     except Exception:
         raise HTTPException(

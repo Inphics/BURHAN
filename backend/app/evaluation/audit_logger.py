@@ -13,7 +13,7 @@ class AuditEvent:
     allowed: bool
     reason: str
     execution_status: str = "not_attempted"
-
+    request_id: str | None = None
 
 class AuditLogger:
     def __init__(self, database=None):
@@ -29,6 +29,7 @@ class AuditLogger:
         allowed: bool,
         reason: str,
         execution_status: str = "not_attempted",
+        request_id: str | None = None,
     ):
         event = AuditEvent(
             timestamp=datetime.now(timezone.utc).isoformat(),
@@ -37,6 +38,7 @@ class AuditLogger:
             allowed=allowed,
             reason=reason,
             execution_status=execution_status,
+            request_id=request_id,
         )
 
         self.database.save_event(
@@ -46,8 +48,8 @@ class AuditLogger:
             allowed=event.allowed,
             reason=event.reason,
             execution_status=event.execution_status,
+            request_id=event.request_id,
         )
 
         self.events.append(event)
-
         return event

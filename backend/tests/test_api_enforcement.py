@@ -286,3 +286,77 @@ def test_audit_failure_prevents_executor_call(monkeypatch):
 
     # An audit failure must prevent execution.
     executor.execute.assert_not_called()
+
+
+def test_enforce_audit_records_share_request_id():
+    client = TestClient(main.app)
+
+    response = client.post(
+        "/enforce",
+        json={"action": "read"},
+        headers={"X-API-Key": "research-test-key"},
+    )
+
+    assert response.status_code == 200
+
+    events = main.audit_logger.database.get_events()
+
+    assert len(events) == 2
+
+    # Both audit records must have a request ID.
+    assert events[0]["request_id"] is not None
+    assert events[1]["request_id"] is not None
+
+    # The two records must belong to the same enforcement request.
+    assert events[0]["request_id"] == events[1]["request_id"]
+
+    # The records represent different stages of enforcement.
+    assert events[0]["execution_status"] == "simulated"
+    assert events[1]["execution_status"] == "not_attempted"
+
+
+def test_separate_enforcement_requests_have_different_ids():
+    client = TestClient(main.app)
+
+    first_response = client.post(
+        "/enforce",
+        json={"action": "read"},
+        headers={"X-API-Key": "research-test-key"},
+    )
+
+    second_response = client.post(
+        "/enforce",
+        json={"action": "report"},
+        headers={"X-API-Key": "research-test-key"},
+    )
+
+    assert first_response.status_code == 200
+    assert second_response.status_code == 200
+
+    events = main.audit_logger.database.get_events()
+
+    # Each enforcement request produces two audit records.
+    assert len(events) == 4
+
+    # Records are returned newest first.
+    second_request_final = events[0]
+    second_request_initial = events[1]
+    first_request_final = events[2]
+    first_request_initial = events[3]
+
+    # Each pair must share one request ID.
+    assert (
+        first_request_final["request_id"]
+        == first_request_initial["request_id"]
+    )
+
+    assert (
+        second_request_final["request_id"]
+        == second_request_initial["request_id"]
+    )
+
+    # Separate enforcement requests must have different IDs.
+    assert (
+        first_request_final["request_id"]
+        != second_request_final["request_id"]
+    )

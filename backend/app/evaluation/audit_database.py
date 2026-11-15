@@ -16,6 +16,7 @@ class AuditDatabase:
         self.create_tables()
 
 
+    
     def create_tables(self):
         with sqlite3.connect(self.db_path) as connection:
             connection.execute(
@@ -28,10 +29,9 @@ class AuditDatabase:
                     allowed INTEGER NOT NULL,
                     reason TEXT NOT NULL
                 )
-               """
+                """
             )
 
-            # Add execution outcome tracking to existing databases.
             columns = connection.execute(
                 "PRAGMA table_info(audit_events)"
             ).fetchall()
@@ -47,6 +47,15 @@ class AuditDatabase:
                     """
                 )
 
+            if "request_id" not in column_names:
+                connection.execute(
+                    """
+                    ALTER TABLE audit_events
+                    ADD COLUMN request_id TEXT
+                    """
+                )
+
+    
     
     
     def save_event(
@@ -57,6 +66,7 @@ class AuditDatabase:
         allowed,
         reason,
         execution_status="not_attempted",
+        request_id=None,
     ):
         with sqlite3.connect(self.db_path) as connection:
             connection.execute(
@@ -67,8 +77,9 @@ class AuditDatabase:
                     action,
                     allowed,
                     reason,
-                    execution_status
-                ) VALUES (?, ?, ?, ?, ?, ?)
+                    execution_status,
+                    request_id
+                ) VALUES (?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     timestamp,
@@ -77,10 +88,13 @@ class AuditDatabase:
                     int(allowed),
                     reason,
                     execution_status,
+                    request_id,
                 ),
             )
 
+
      
+    
     
     def get_events(self, limit=100):
         with sqlite3.connect(self.db_path) as connection:
@@ -95,7 +109,8 @@ class AuditDatabase:
                     action,
                     allowed,
                     reason,
-                    execution_status
+                    execution_status,
+                    request_id
                 FROM audit_events
                 ORDER BY id DESC
                 LIMIT ?
@@ -112,7 +127,9 @@ class AuditDatabase:
                     "allowed": bool(row["allowed"]),
                     "reason": row["reason"],
                     "execution_status": row["execution_status"],
+                    "request_id": row["request_id"],
                 }
                 for row in cursor.fetchall()
             ]
+
 
