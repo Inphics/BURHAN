@@ -533,10 +533,10 @@ BURHAN is being developed incrementally, with an emphasis on clear architecture,
 - [x] Document the framework's purpose and architecture.
 - [x] Add technical setup and API reference documentation.
 - [x] Document the security model and known limitations.
-- [x] Expand automated tests for authentication, authorization, edge cases, and API failure scenarios (30 passing tests).
+- [x] Expand automated tests for authentication, authorization, edge cases, and API failure scenarios (48 passing tests).
 - [x] Configure SQLite audit database paths and enforce API query limits.
 - [x] Introduce API-key authentication for agent evaluation and sensitive audit inspection.
-- [ ] Add structured error handling and operational safeguards.
+- [x] Add structured error handling and operational safeguards for tested authentication, enforcement, and audit failure scenarios.
 - [ ] Prepare a documented backend prototype release.
 
 ### Phase 3 — Agent Integration and Verification (Planned)
