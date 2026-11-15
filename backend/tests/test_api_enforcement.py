@@ -75,10 +75,23 @@ def test_research_agent_can_enforce_read():
 
     events = main.audit_logger.database.get_events()
 
-    assert len(events) == 1
+    # The database returns newest events first.
+    assert len(events) == 2
+
+    # Final execution outcome.
     assert events[0]["agent"] == "research_agent"
     assert events[0]["action"] == "read"
     assert events[0]["allowed"] is True
+    assert events[0]["execution_status"] == "simulated"
+
+    # Pre-execution audit record.
+    assert events[1]["agent"] == "research_agent"
+    assert events[1]["action"] == "read"
+    assert events[1]["allowed"] is False
+    assert events[1]["execution_status"] == "not_attempted"
+    assert events[1]["reason"] == (
+        "Enforcement requested; decision pending."
+    )
 
 
 def test_research_agent_cannot_enforce_delete():
@@ -99,10 +112,23 @@ def test_research_agent_cannot_enforce_delete():
 
     events = main.audit_logger.database.get_events()
 
-    assert len(events) == 1
+    # Two audit records: final outcome and initial request.
+    assert len(events) == 2
+
+    # Final outcome: action was blocked.
     assert events[0]["agent"] == "research_agent"
     assert events[0]["action"] == "delete"
     assert events[0]["allowed"] is False
+    assert events[0]["execution_status"] == "blocked"
+
+    # Initial audit record: execution not yet attempted.
+    assert events[1]["agent"] == "research_agent"
+    assert events[1]["action"] == "delete"
+    assert events[1]["allowed"] is False
+    assert events[1]["execution_status"] == "not_attempted"
+    assert events[1]["reason"] == (
+        "Enforcement requested; decision pending."
+    )
 
 
 def test_admin_agent_can_enforce_delete():
@@ -121,9 +147,142 @@ def test_admin_agent_can_enforce_delete():
     assert result["allowed"] is True
     assert result["executed"] is True
 
+    
     events = main.audit_logger.database.get_events()
 
-    assert len(events) == 1
+    # Two records: final outcome and pre-execution request.
+    assert len(events) == 2
+
+    # Final outcome: administrator action was simulated.
     assert events[0]["agent"] == "admin_agent"
     assert events[0]["action"] == "delete"
     assert events[0]["allowed"] is True
+    assert events[0]["execution_status"] == "simulated"
+
+    # Initial record: execution had not yet been attempted.
+    assert events[1]["agent"] == "admin_agent"
+    assert events[1]["action"] == "delete"
+    assert events[1]["allowed"] is False
+    assert events[1]["execution_status"] == "not_attempted"
+    assert events[1]["reason"] == (
+        "Enforcement requested; decision pending."
+    )
+
+
+from unittest.mock import Mock
+
+
+def test_failed_execution_is_reported_safely(monkeypatch):
+    client = TestClient(main.app)
+
+    # Simulate an executor crash.
+    failing_executor = Mock()
+    failing_executor.execute.side_effect = RuntimeError(
+        "Internal executor failure"
+    )
+
+    monkeypatch.setattr(
+        main.enforcement_engine,
+        "executor",
+        failing_executor,
+    )
+
+    response = client.post(
+        "/enforce",
+        json={"action": "delete"},
+        headers={"X-API-Key": "admin-test-key"},
+    )
+
+    assert response.status_code == 200
+
+    result = response.json()
+
+    assert result["allowed"] is True
+    assert result["executed"] is False
+    assert result["error"] == "Action execution failed."
+
+    
+    events = main.audit_logger.database.get_events()
+
+    # Two audit records should exist.
+    assert len(events) == 2
+
+    # Final outcome: execution failed.
+    assert events[0]["agent"] == "admin_agent"
+    assert events[0]["action"] == "delete"
+    assert events[0]["allowed"] is True
+    assert events[0]["execution_status"] == "failed"
+
+    # Initial record: execution had not been attempted.
+    assert events[1]["agent"] == "admin_agent"
+    assert events[1]["action"] == "delete"
+    assert events[1]["allowed"] is False
+    assert events[1]["execution_status"] == "not_attempted"
+    assert events[1]["reason"] == (
+        "Enforcement requested; decision pending."
+    )
+
+    # Verify that the executor was called exactly once.
+    failing_executor.execute.assert_called_once_with("delete")
+
+
+
+def test_enforce_does_not_report_success_when_audit_fails(monkeypatch):
+    client = TestClient(main.app)
+
+    # Simulate an audit database failure.
+    failing_log = Mock(
+        side_effect=RuntimeError("Database unavailable")
+    )
+
+    monkeypatch.setattr(
+        main.audit_logger,
+        "log",
+        failing_log,
+    )
+
+    response = client.post(
+        "/enforce",
+        json={"action": "read"},
+        headers={"X-API-Key": "research-test-key"},
+    )
+
+    # The API must not return a successful response
+    # when the required audit record cannot be saved.
+    assert response.status_code == 503
+
+    assert response.json()["detail"] == (
+        "Audit logging is unavailable."
+    )
+
+
+def test_audit_failure_prevents_executor_call(monkeypatch):
+    client = TestClient(main.app)
+
+    # Replace the executor with a mock so we can
+    # verify whether execution was attempted.
+    executor = Mock()
+
+    monkeypatch.setattr(
+        main.enforcement_engine,
+        "executor",
+        executor,
+    )
+
+    # Simulate audit logging being unavailable.
+    monkeypatch.setattr(
+        main.audit_logger,
+        "log",
+        Mock(side_effect=RuntimeError("Database unavailable")),
+    )
+
+    response = client.post(
+        "/enforce",
+        json={"action": "read"},
+        headers={"X-API-Key": "research-test-key"},
+    )
+
+    assert response.status_code == 503
+
+    # An audit failure must prevent execution.
+    executor.execute.assert_not_called()

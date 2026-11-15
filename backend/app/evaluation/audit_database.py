@@ -28,10 +28,36 @@ class AuditDatabase:
                     allowed INTEGER NOT NULL,
                     reason TEXT NOT NULL
                 )
-                """
+               """
             )
+
+            # Add execution outcome tracking to existing databases.
+            columns = connection.execute(
+                "PRAGMA table_info(audit_events)"
+            ).fetchall()
+
+            column_names = {column[1] for column in columns}
+
+            if "execution_status" not in column_names:
+                connection.execute(
+                    """
+                    ALTER TABLE audit_events
+                    ADD COLUMN execution_status TEXT
+                    NOT NULL DEFAULT 'not_attempted'
+                    """
+                )
+
     
-    def save_event(self, timestamp, agent, action, allowed, reason):
+    
+    def save_event(
+        self,
+        timestamp,
+        agent,
+        action,
+        allowed,
+        reason,
+        execution_status="not_attempted",
+    ):
         with sqlite3.connect(self.db_path) as connection:
             connection.execute(
                 """
@@ -40,13 +66,21 @@ class AuditDatabase:
                     agent,
                     action,
                     allowed,
-                    reason
-                )
-                VALUES (?, ?, ?, ?, ?)
+                    reason,
+                    execution_status
+                ) VALUES (?, ?, ?, ?, ?, ?)
                 """,
-                (timestamp, agent, action, int(allowed), reason),
+                (
+                    timestamp,
+                    agent,
+                    action,
+                    int(allowed),
+                    reason,
+                    execution_status,
+                ),
             )
-    
+
+     
     
     def get_events(self, limit=100):
         with sqlite3.connect(self.db_path) as connection:
@@ -54,7 +88,14 @@ class AuditDatabase:
 
             cursor = connection.execute(
                 """
-                SELECT id, timestamp, agent, action, allowed, reason
+                SELECT
+                    id,
+                    timestamp,
+                    agent,
+                    action,
+                    allowed,
+                    reason,
+                    execution_status
                 FROM audit_events
                 ORDER BY id DESC
                 LIMIT ?
@@ -70,6 +111,7 @@ class AuditDatabase:
                     "action": row["action"],
                     "allowed": bool(row["allowed"]),
                     "reason": row["reason"],
+                    "execution_status": row["execution_status"],
                 }
                 for row in cursor.fetchall()
             ]

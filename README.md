@@ -390,6 +390,63 @@ FastAPI automatically generates interactive API documentation:
 
 These pages describe the API's request and response structures.
 
+
+## Enforcement Audit Safeguards
+
+BURHAN includes a prototype enforcement audit workflow designed to improve accountability for autonomous AI agent actions.
+
+### Pre-Execution Audit Protection
+
+For authenticated requests to the `/enforce` endpoint, BURHAN follows these steps:
+
+1. Attempts to save a pre-execution audit record before invoking the enforcement engine.
+2. Returns HTTP `503 Service Unavailable` if the initial audit write fails, preventing the executor from being called.
+3. Evaluates the agent's permissions using the policy engine.
+4. Simulates the requested action only when the policy permits it.
+5. Attempts to save a final audit record containing the policy decision and execution outcome.
+
+Each authenticated `/enforce` request normally creates two audit records:
+
+- **Pre-execution record:** Documents the request before execution is attempted.
+- **Final outcome record:** Documents whether the action was blocked, simulated successfully, or failed.
+
+### Audit Execution Statuses
+
+BURHAN currently supports the following audit execution statuses:
+
+| Status | Description |
+|--------|-------------|
+| `not_attempted` | Execution has not been attempted, including pending enforcement requests and policy-only evaluations. |
+| `blocked` | The requested action was denied by policy. |
+| `simulated` | The permitted action was successfully simulated. |
+| `failed` | The permitted action simulation failed. |
+
+### Audit Database Failure Handling
+
+If the initial audit database write fails:
+
+- BURHAN returns HTTP `503 Service Unavailable`.
+- The executor is not called.
+- The requested action is not simulated.
+
+If the final audit database write fails:
+
+- BURHAN returns HTTP `503 Service Unavailable`.
+- The initial audit record remains available if it was successfully saved.
+- The action may already have been simulated.
+- The final execution outcome may not be recorded.
+
+### Current Security Limitations
+
+- **Simulation only:** BURHAN's action executor simulates supported actions. It does not perform real-world operations.
+- **Pending decision representation:** Pre-execution records currently use `allowed=False` as a placeholder while the policy decision is pending. This does not represent an actual policy denial.
+- **Incomplete final records:** A successful pre-execution audit write does not guarantee that the final outcome record will be saved.
+- **Audit integrity:** SQLite provides persistent audit storage, but the records are not cryptographically tamper-proof.
+- **Prototype status:** BURHAN is a development prototype and is not yet suitable for production security enforcement.
+
+These safeguards are intended to establish a foundation for stronger, verifiable agent enforcement and audit accountability.
+
+
 ## Security Model and Known Limitations
 
 BURHAN is an experimental AI agent safety framework focused on policy evaluation, decision transparency, and auditability.

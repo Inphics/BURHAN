@@ -49,7 +49,7 @@ def test_evaluate_endpoint_records_audit_event(monkeypatch):
     assert event["action"] == "delete"
     assert event["allowed"] is False
     assert "not permitted" in event["reason"]
-
+    assert events[0]["execution_status"] == "not_attempted"
 
 
 def test_audit_endpoint_disabled_by_default(monkeypatch):

@@ -60,3 +60,26 @@ def test_unknown_agent_cannot_execute_action():
     assert result["executed"] is False
 
     executor.execute.assert_not_called()
+
+
+def test_executor_failure_is_handled_safely():
+    executor = Mock()
+
+    # Simulate an unexpected executor failure.
+    executor.execute.side_effect = RuntimeError(
+        "Simulated execution failure"
+    )
+
+    engine = EnforcementEngine(executor=executor)
+
+    result = engine.enforce(
+        agent="admin_agent",
+        action="delete",
+    )
+
+    assert result["allowed"] is True
+    assert result["executed"] is False
+    assert result["action"] == "delete"
+    assert result["error"] == "Action execution failed."
+
+    executor.execute.assert_called_once_with("delete")

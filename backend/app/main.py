@@ -110,12 +110,14 @@ def get_audit_events(
     }
 
 
+
+
 @app.post("/enforce")
 def enforce_action(
     request: ActionRequest,
     x_api_key: str | None = Header(default=None),
 ):
-    # Identify the agent using its API key.
+    # Authenticate the agent.
     agent = authenticate_agent(x_api_key)
 
     if agent is None:
@@ -124,21 +126,52 @@ def enforce_action(
             detail="Invalid or missing agent API key.",
         )
 
-    # Check permissions before simulating the action.
+    # Record the request before attempting execution.
+    try:
+        audit_logger.log(
+            agent=agent,
+            action=request.action,
+            allowed=False,
+            reason="Enforcement requested; decision pending.",
+            execution_status="not_attempted",
+        )
+    except Exception:
+        raise HTTPException(
+            status_code=503,
+            detail="Audit logging is unavailable.",
+        ) from None
+
+    # Check permissions and attempt safe simulation.
     result = enforcement_engine.enforce(
         agent=agent,
         action=request.action,
     )
 
-    # Record the verified agent and enforcement decision.
-    audit_logger.log(
-        agent=agent,
-        action=request.action,
-        allowed=result["allowed"],
-        reason=result["reason"],
-    )
+    if not result["allowed"]:
+        execution_status = "blocked"
+    elif result["executed"]:
+        execution_status = "simulated"
+    else:
+        execution_status = "failed"
+
+    # Record the final policy decision and outcome.
+    try:
+        audit_logger.log(
+            agent=agent,
+            action=request.action,
+            allowed=result["allowed"],
+            reason=result["reason"],
+            execution_status=execution_status,
+        )
+    except Exception:
+        raise HTTPException(
+            status_code=503,
+            detail="Audit logging is unavailable.",
+        ) from None
 
     return result
+
+
 
 
 
