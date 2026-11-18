@@ -1,0 +1,15 @@
+
+{
+  "permissions": {
+    "research_agent": [
+      "read",
+      "report"
+    ],
+    "admin_agent": [
+      "read",
+      "report",
+      "update",
+      "delete"
+    ]
+  }
+}

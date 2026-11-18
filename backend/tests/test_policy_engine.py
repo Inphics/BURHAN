@@ -124,3 +124,204 @@ def test_full_permission_lifecycle():
 
     # The agent can no longer update
     assert engine.evaluate("research_agent", "update").allowed is False
+
+
+def test_policy_engine_rejects_invalid_permissions(tmp_path, monkeypatch):
+    import json
+    import pytest
+
+    from backend.app.policies import policy_engine
+
+    invalid_config = {
+        "permissions": {
+            "research_agent": "read"
+        }
+    }
+
+    config_directory = tmp_path / "config"
+    config_directory.mkdir()
+
+    config_file = config_directory / "policies.json"
+    config_file.write_text(
+        json.dumps(invalid_config),
+        encoding="utf-8",
+    )
+
+    original_path = policy_engine.Path
+
+    def redirected_path(*args, **kwargs):
+        if args and args[0] == policy_engine.__file__:
+            return original_path(
+                tmp_path / "app" / "policies" / "policy_engine.py"
+            )
+        return original_path(*args, **kwargs)
+
+    monkeypatch.setattr(policy_engine, "Path", redirected_path)
+
+    with pytest.raises(ValueError, match="must be a list"):
+        policy_engine.PolicyEngine()
+
+
+def test_unknown_agent_is_denied_with_json_policy():
+    from backend.app.policies.policy_engine import PolicyEngine
+
+    engine = PolicyEngine()
+
+    decision = engine.evaluate(
+        agent="unknown_agent",
+        action="read",
+    )
+
+    assert decision.allowed is False
+    assert "not permitted" in decision.reason
+
+
+def test_policy_engine_rejects_missing_configuration(tmp_path, monkeypatch):
+    import pytest
+
+    from backend.app.policies import policy_engine
+
+    original_path = policy_engine.Path
+
+    def redirected_path(*args, **kwargs):
+        if args and args[0] == policy_engine.__file__:
+            return original_path(
+                tmp_path / "app" / "policies" / "policy_engine.py"
+            )
+        return original_path(*args, **kwargs)
+
+    monkeypatch.setattr(policy_engine, "Path", redirected_path)
+
+    # No config/policies.json file exists in this temporary directory.
+    with pytest.raises(FileNotFoundError):
+        policy_engine.PolicyEngine()
+
+
+def test_policy_engine_rejects_unknown_configuration_fields(
+    tmp_path, monkeypatch
+):
+    import json
+    import pytest
+
+    from backend.app.policies import policy_engine
+
+    invalid_config = {
+        "permissions": {
+            "research_agent": ["read", "report"]
+        },
+        "allow_everything": True,
+    }
+
+    config_directory = tmp_path / "config"
+    config_directory.mkdir()
+
+    config_file = config_directory / "policies.json"
+    config_file.write_text(
+        json.dumps(invalid_config),
+        encoding="utf-8",
+    )
+
+    original_path = policy_engine.Path
+
+    def redirected_path(*args, **kwargs):
+        if args and args[0] == policy_engine.__file__:
+            return original_path(
+                tmp_path / "app" / "policies" / "policy_engine.py"
+            )
+        return original_path(*args, **kwargs)
+
+    monkeypatch.setattr(policy_engine, "Path", redirected_path)
+
+    with pytest.raises(
+        ValueError,
+        match="Unknown policy configuration fields",
+    ):
+        policy_engine.PolicyEngine()
+
+
+def test_policy_engine_rejects_empty_agent_name(tmp_path, monkeypatch):
+    import json
+    import pytest
+
+    from backend.app.policies import policy_engine
+
+    config_directory = tmp_path / "config"
+    config_directory.mkdir()
+
+    config_file = config_directory / "policies.json"
+    config_file.write_text(
+        json.dumps({
+            "permissions": {
+                "": ["read"]
+            }
+        }),
+        encoding="utf-8",
+    )
+
+    original_path = policy_engine.Path
+
+    def redirected_path(*args, **kwargs):
+        if args and args[0] == policy_engine.__file__:
+            return original_path(
+                tmp_path / "app" / "policies" / "policy_engine.py"
+            )
+        return original_path(*args, **kwargs)
+
+    monkeypatch.setattr(policy_engine, "Path", redirected_path)
+
+    with pytest.raises(ValueError, match="agent names"):
+        policy_engine.PolicyEngine()
+
+
+def test_policy_engine_rejects_empty_action_name(tmp_path, monkeypatch):
+    import json
+    import pytest
+
+    from backend.app.policies import policy_engine
+
+    config_directory = tmp_path / "config"
+    config_directory.mkdir()
+
+    config_file = config_directory / "policies.json"
+    config_file.write_text(
+        json.dumps({
+            "permissions": {
+                "research_agent": ["read", ""]
+            }
+        }),
+        encoding="utf-8",
+    )
+
+    original_path = policy_engine.Path
+
+    def redirected_path(*args, **kwargs):
+        if args and args[0] == policy_engine.__file__:
+            return original_path(
+                tmp_path / "app" / "policies" / "policy_engine.py"
+            )
+        return original_path(*args, **kwargs)
+
+    monkeypatch.setattr(policy_engine, "Path", redirected_path)
+
+    with pytest.raises(ValueError, match="non-empty action strings"):
+        policy_engine.PolicyEngine()
+
+
+def test_policy_engine_enforces_json_permissions():
+    from backend.app.policies.policy_engine import PolicyEngine
+
+    engine = PolicyEngine()
+
+    # Research agent can read and report.
+    assert engine.evaluate("research_agent", "read").allowed is True
+    assert engine.evaluate("research_agent", "report").allowed is True
+
+    # Research agent cannot update or delete.
+    assert engine.evaluate("research_agent", "update").allowed is False
+    assert engine.evaluate("research_agent", "delete").allowed is False
+
+    # Admin agent has all four configured permissions.
+    assert engine.evaluate("admin_agent", "read").allowed is True
+    assert engine.evaluate("admin_agent", "report").allowed is True
+    assert engine.evaluate("admin_agent", "update").allowed is True
+    assert engine.evaluate("admin_agent", "delete").allowed is True

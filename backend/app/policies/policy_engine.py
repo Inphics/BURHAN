@@ -1,5 +1,7 @@
 
+import json
 from dataclasses import dataclass
+from pathlib import Path
 
 
 @dataclass
@@ -10,12 +12,55 @@ class PolicyDecision:
 
 class PolicyEngine:
     def __init__(self):
-        self.permissions = {
-            "research_agent": {"read", "report"},
-            "admin_agent": {"read", "report", "update", "delete"},
-        }
+        config_path = (
+            Path(__file__).resolve().parents[2]
+            / "config"
+            / "policies.json"
+        )
 
-    
+        with config_path.open("r", encoding="utf-8") as file:
+            config = json.load(file)
+
+        if not isinstance(config, dict):
+            raise ValueError("Policy configuration must be a JSON object.")
+
+        unexpected_fields = set(config) - {"permissions"}
+
+        if unexpected_fields:
+            raise ValueError(
+                "Unknown policy configuration fields: "
+                + ", ".join(sorted(unexpected_fields))
+            )
+
+        raw_permissions = config.get("permissions")
+
+        if not isinstance(raw_permissions, dict):
+            raise ValueError(
+                "Policy configuration must contain a permissions object."
+            )
+
+        self.permissions = {}
+
+        for agent, actions in raw_permissions.items():
+            if not isinstance(agent, str) or not agent:
+                raise ValueError("Policy agent names must be non-empty strings.")
+
+            if not isinstance(actions, list):
+                raise ValueError(
+                    f"Permissions for '{agent}' must be a list."
+                )
+
+            if not all(
+                isinstance(action, str) and action
+                for action in actions
+            ):
+                raise ValueError(
+                    f"Permissions for '{agent}' must contain only "
+                    "non-empty action strings."
+                )
+
+            self.permissions[agent] = set(actions)
+
     def grant_permission(self, agent: str, action: str) -> bool:
         allowed_actions = self.permissions.get(agent)
 
