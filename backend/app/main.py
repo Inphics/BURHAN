@@ -10,6 +10,7 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 from backend.app.execution.enforcement_engine import EnforcementEngine
 from backend.app.evaluation.audit_logger import AuditLogger
+from backend.app.evaluation.audit_integrity import AuditIntegrity
 from backend.app.policies.policy_engine import PolicyEngine
 
 
@@ -110,6 +111,53 @@ def get_audit_events(
     }
 
 
+
+@app.get("/audit/verify")
+def verify_audit_events(
+    limit: int = Query(default=100, ge=1, le=100),
+    x_api_key: str | None = Header(default=None),
+):
+    # Require the audit API to be enabled.
+    if os.getenv("BURHAN_ENABLE_AUDIT_API") != "true":
+        raise HTTPException(
+            status_code=403,
+            detail="Audit inspection is disabled.",
+        )
+
+    # Require a configured audit API key.
+    expected_api_key = os.getenv("BURHAN_AUDIT_API_KEY")
+
+    if not expected_api_key:
+        raise HTTPException(
+            status_code=403,
+            detail="Audit API key is not configured.",
+        )
+
+    # Authenticate the caller before accessing audit records.
+    if not x_api_key or not hmac.compare_digest(
+        x_api_key, expected_api_key
+    ):
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid or missing API key.",
+        )
+
+    # Verification requires a separate HMAC signing key.
+    secret_key = os.getenv("BURHAN_AUDIT_HMAC_KEY")
+
+    if not secret_key:
+        raise HTTPException(
+            status_code=503,
+            detail="Audit verification key is not configured.",
+        )
+
+    # Retrieve and verify the requested audit records.
+    events = audit_logger.database.get_events(limit=limit)
+
+    return AuditIntegrity.verify_records(
+        events,
+        secret_key,
+    )
 
 
 @app.post("/enforce")
