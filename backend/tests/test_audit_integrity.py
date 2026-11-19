@@ -222,3 +222,103 @@ def test_verify_record_rejects_unsigned_record():
         record,
         "test-only-secret",
     ) is False
+
+
+def test_verify_record_rejects_malformed_hmac():
+    from backend.app.evaluation.audit_integrity import AuditIntegrity
+
+    record = {
+        "timestamp": "2026-11-19T12:00:00+00:00",
+        "agent": "research_agent",
+        "action": "read",
+        "allowed": True,
+        "reason": "Action permitted.",
+        "execution_status": "simulated",
+        "request_id": "malformed-hmac-test",
+        "event_hmac": "this-is-not-a-valid-hmac",
+    }
+
+    result = AuditIntegrity.verify_record(
+        record,
+        "test-only-hmac-secret",
+    )
+
+    assert result is False
+
+
+def test_verify_record_rejects_signature_from_wrong_secret():
+    from backend.app.evaluation.audit_integrity import AuditIntegrity
+
+    record = {
+        "timestamp": "2026-11-19T12:00:00+00:00",
+        "agent": "research_agent",
+        "action": "read",
+        "allowed": True,
+        "reason": "Action permitted.",
+        "execution_status": "simulated",
+        "request_id": "wrong-secret-test",
+    }
+
+    # Sign the record with a different secret key.
+    record["event_hmac"] = AuditIntegrity.calculate_hmac(
+        record,
+        "incorrect-test-secret",
+    )
+
+    # Attempt verification using the correct secret.
+    result = AuditIntegrity.verify_record(
+        record,
+        "correct-test-secret",
+    )
+
+    assert result is False
+
+
+def test_verify_record_rejects_non_string_hmac():
+    from backend.app.evaluation.audit_integrity import AuditIntegrity
+
+    record = {
+        "timestamp": "2026-11-19T12:00:00+00:00",
+        "agent": "research_agent",
+        "action": "read",
+        "allowed": True,
+        "reason": "Action permitted.",
+        "execution_status": "simulated",
+        "request_id": "invalid-type-test",
+        "event_hmac": 12345,
+    }
+
+    result = AuditIntegrity.verify_record(
+        record,
+        "test-only-hmac-secret",
+    )
+
+    assert result is False
+
+
+def test_verify_records_classifies_malformed_hmac_as_invalid():
+    from backend.app.evaluation.audit_integrity import AuditIntegrity
+
+    record = {
+        "id": 1,
+        "timestamp": "2026-11-19T12:00:00+00:00",
+        "agent": "research_agent",
+        "action": "read",
+        "allowed": True,
+        "reason": "Action permitted.",
+        "execution_status": "simulated",
+        "request_id": "malformed-batch-test",
+        "event_hmac": 12345,
+    }
+
+    result = AuditIntegrity.verify_records(
+        [record],
+        "test-only-hmac-secret",
+    )
+
+    assert result["total"] == 1
+    assert result["valid"] == 0
+    assert result["invalid"] == 1
+    assert result["unsigned"] == 0
+
+    assert result["results"][0]["status"] == "invalid"

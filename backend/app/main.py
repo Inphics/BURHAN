@@ -1,6 +1,5 @@
 
-import os
-import hmac
+import os, hmac, sqlite3
 from uuid import uuid4
 
 from backend.app.security.agent_auth import authenticate_agent
@@ -152,12 +151,19 @@ def verify_audit_events(
         )
 
     # Retrieve and verify the requested audit records.
-    events = audit_logger.database.get_events(limit=limit)
+    try:
+        events = audit_logger.database.get_events(limit=limit)
 
-    return AuditIntegrity.verify_records(
-        events,
-        secret_key,
-    )
+        return AuditIntegrity.verify_records(
+            events,
+            secret_key,
+        )
+    except (OSError, sqlite3.Error):
+        raise HTTPException(
+            status_code=503,
+            detail="Audit verification is unavailable.",
+        ) from None
+
 
 
 @app.post("/enforce")
@@ -221,8 +227,3 @@ def enforce_action(
         ) from None
 
     return result
-
-
-
-
-

@@ -66,7 +66,15 @@ class AuditIntegrity:
 
         expected_hmac = record.get("event_hmac")
 
-        if not expected_hmac:
+        # Reject missing or incorrectly typed signatures.
+        if not isinstance(expected_hmac, str):
+            return False
+
+        # HMAC-SHA256 signatures must be 64 hexadecimal characters.
+        if len(expected_hmac) != 64:
+            return False
+
+        if any(character not in "0123456789abcdef" for character in expected_hmac):
             return False
 
         event_data = {
@@ -96,12 +104,13 @@ class AuditIntegrity:
         results = []
 
         for record in records:
-            if not record.get("event_hmac"):
+            if record.get("event_hmac") is None:
                 status = "unsigned"
             elif AuditIntegrity.verify_record(record, secret_key):
                 status = "valid"
             else:
                 status = "invalid"
+
 
             results.append(
                 {

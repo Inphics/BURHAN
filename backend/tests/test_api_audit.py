@@ -628,3 +628,207 @@ def test_audit_verify_respects_record_limit(tmp_path, monkeypatch):
     assert result["invalid"] == 0
     assert result["unsigned"] == 0
     assert len(result["results"]) == 2
+
+
+def test_audit_verify_rejects_empty_api_key(monkeypatch):
+    from fastapi.testclient import TestClient
+    from backend.app.main import app
+
+    monkeypatch.setenv("BURHAN_ENABLE_AUDIT_API", "true")
+    monkeypatch.setenv("BURHAN_AUDIT_API_KEY", "test-only-audit-key")
+    monkeypatch.setenv("BURHAN_AUDIT_HMAC_KEY", "test-only-hmac-key")
+
+    client = TestClient(app)
+
+    response = client.get(
+        "/audit/verify",
+        headers={"X-API-Key": ""},
+    )
+
+    assert response.status_code == 401
+    assert response.json()["detail"] == "Invalid or missing API key."
+
+
+def test_audit_verify_rejects_whitespace_api_key(monkeypatch):
+    from fastapi.testclient import TestClient
+    from backend.app.main import app
+
+    monkeypatch.setenv("BURHAN_ENABLE_AUDIT_API", "true")
+    monkeypatch.setenv("BURHAN_AUDIT_API_KEY", "test-only-audit-key")
+    monkeypatch.setenv("BURHAN_AUDIT_HMAC_KEY", "test-only-hmac-key")
+
+    client = TestClient(app)
+
+    response = client.get(
+        "/audit/verify",
+        headers={"X-API-Key": "   "},
+    )
+
+    assert response.status_code == 401
+    assert response.json()["detail"] == "Invalid or missing API key."
+
+
+def test_audit_verify_rejects_unconfigured_api_key(monkeypatch):
+    from fastapi.testclient import TestClient
+    from backend.app.main import app
+
+    # Enable the audit API for this test.
+    monkeypatch.setenv("BURHAN_ENABLE_AUDIT_API", "true")
+
+    # Remove the server's configured audit API key.
+    monkeypatch.delenv("BURHAN_AUDIT_API_KEY", raising=False)
+
+    # Keep the verification key configured.
+    monkeypatch.setenv(
+        "BURHAN_AUDIT_HMAC_KEY",
+        "test-only-hmac-key",
+    )
+
+    client = TestClient(app)
+
+    response = client.get(
+        "/audit/verify",
+        headers={"X-API-Key": "some-client-key"},
+    )
+
+    assert response.status_code == 403
+    assert response.json()["detail"] == (
+        "Audit API key is not configured."
+    )
+
+
+def test_audit_verify_rejects_zero_record_limit(monkeypatch):
+    from fastapi.testclient import TestClient
+    from backend.app.main import app
+
+    monkeypatch.setenv("BURHAN_ENABLE_AUDIT_API", "true")
+    monkeypatch.setenv("BURHAN_AUDIT_API_KEY", "test-only-audit-key")
+    monkeypatch.setenv("BURHAN_AUDIT_HMAC_KEY", "test-only-hmac-key")
+
+    client = TestClient(app)
+
+    response = client.get(
+        "/audit/verify?limit=0",
+        headers={"X-API-Key": "test-only-audit-key"},
+    )
+
+    assert response.status_code == 422
+
+
+def test_audit_verify_rejects_excessive_record_limit(monkeypatch):
+    from fastapi.testclient import TestClient
+    from backend.app.main import app
+
+    monkeypatch.setenv("BURHAN_ENABLE_AUDIT_API", "true")
+    monkeypatch.setenv("BURHAN_AUDIT_API_KEY", "test-only-audit-key")
+    monkeypatch.setenv("BURHAN_AUDIT_HMAC_KEY", "test-only-hmac-key")
+
+    client = TestClient(app)
+
+    response = client.get(
+        "/audit/verify?limit=101",
+        headers={"X-API-Key": "test-only-audit-key"},
+    )
+
+    assert response.status_code == 422
+
+
+def test_audit_verify_rejects_non_numeric_record_limit(monkeypatch):
+    from fastapi.testclient import TestClient
+    from backend.app.main import app
+
+    monkeypatch.setenv("BURHAN_ENABLE_AUDIT_API", "true")
+    monkeypatch.setenv("BURHAN_AUDIT_API_KEY", "test-only-audit-key")
+    monkeypatch.setenv("BURHAN_AUDIT_HMAC_KEY", "test-only-hmac-key")
+
+    client = TestClient(app)
+
+    response = client.get(
+        "/audit/verify?limit=hello",
+        headers={"X-API-Key": "test-only-audit-key"},
+    )
+
+    assert response.status_code == 422
+
+
+def test_audit_verify_database_failure_is_not_success(monkeypatch):
+    from fastapi.testclient import TestClient
+
+    from backend.app import main
+
+    monkeypatch.setenv("BURHAN_ENABLE_AUDIT_API", "true")
+    monkeypatch.setenv(
+        "BURHAN_AUDIT_API_KEY",
+        "test-only-audit-key",
+    )
+    monkeypatch.setenv(
+        "BURHAN_AUDIT_HMAC_KEY",
+        "test-only-hmac-key",
+    )
+
+    # Simulate SQLite becoming unavailable.
+    def unavailable_database(limit=100):
+        raise OSError("Simulated audit database failure.")
+
+    monkeypatch.setattr(
+        main.audit_logger.database,
+        "get_events",
+        unavailable_database,
+    )
+
+    client = TestClient(
+        main.app,
+        raise_server_exceptions=False,
+    )
+
+    response = client.get(
+        "/audit/verify",
+        headers={"X-API-Key": "test-only-audit-key"},
+    )
+
+    # Database failure must never produce HTTP 200.
+    assert response.status_code == 503
+    assert response.json()["detail"] == (
+        "Audit verification is unavailable."
+    )
+
+
+def test_audit_verify_handles_empty_database(tmp_path, monkeypatch):
+    from fastapi.testclient import TestClient
+
+    from backend.app import main
+    from backend.app.evaluation.audit_database import AuditDatabase
+    from backend.app.evaluation.audit_logger import AuditLogger
+
+    audit_api_key = "test-only-audit-api-key"
+
+    monkeypatch.setenv("BURHAN_ENABLE_AUDIT_API", "true")
+    monkeypatch.setenv("BURHAN_AUDIT_API_KEY", audit_api_key)
+    monkeypatch.setenv(
+        "BURHAN_AUDIT_HMAC_KEY",
+        "test-only-hmac-secret",
+    )
+
+    # Create a fresh, empty SQLite audit database.
+    database = AuditDatabase(tmp_path / "empty_audit.db")
+    logger = AuditLogger(database=database)
+
+    # Make the API use this database during the test.
+    monkeypatch.setattr(main, "audit_logger", logger)
+
+    client = TestClient(main.app)
+
+    response = client.get(
+        "/audit/verify",
+        headers={"X-API-Key": audit_api_key},
+    )
+
+    assert response.status_code == 200
+
+    result = response.json()
+
+    assert result["total"] == 0
+    assert result["valid"] == 0
+    assert result["invalid"] == 0
+    assert result["unsigned"] == 0
+    assert result["results"] == []
