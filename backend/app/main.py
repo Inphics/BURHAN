@@ -16,8 +16,9 @@ from backend.app.policies.policy_engine import PolicyEngine
 app = FastAPI(
     title="BURHAN API",
     description="Autonomous AI Agent Safety & Verification Framework",
-    version="0.2.0",
+    version="0.3.0",
 )
+
 
 policy_engine = PolicyEngine()
 audit_logger = AuditLogger()
@@ -31,7 +32,7 @@ class ActionRequest(BaseModel):
 def home():
     return {
         "project": "BURHAN",
-        "version": "0.2.0",
+        "version": "0.3.0",
         "status": "running",
         "description": "Autonomous AI Agent Safety & Verification Framework",
     }
