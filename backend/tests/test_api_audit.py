@@ -832,3 +832,23 @@ def test_audit_verify_handles_empty_database(tmp_path, monkeypatch):
     assert result["invalid"] == 0
     assert result["unsigned"] == 0
     assert result["results"] == []
+
+
+def test_audit_history_rejects_missing_api_key(monkeypatch):
+    from fastapi.testclient import TestClient
+    from backend.app.main import app
+
+    monkeypatch.setenv("BURHAN_ENABLE_AUDIT_API", "true")
+    monkeypatch.setenv(
+        "BURHAN_AUDIT_API_KEY",
+        "test-only-audit-key",
+    )
+
+    client = TestClient(app)
+
+    response = client.get("/audit?limit=10")
+
+    assert response.status_code == 401
+    assert response.json()["detail"] == (
+        "Invalid or missing API key."
+    )

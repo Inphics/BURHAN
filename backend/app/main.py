@@ -1,6 +1,9 @@
 
 import os, hmac, sqlite3
 from uuid import uuid4
+from pathlib import Path
+from fastapi.staticfiles import StaticFiles
+
 
 from backend.app.security.agent_auth import authenticate_agent
 from fastapi import FastAPI, HTTPException, Query, Header
@@ -17,6 +20,14 @@ app = FastAPI(
     title="BURHAN API",
     description="Autonomous AI Agent Safety & Verification Framework",
     version="0.3.0",
+)
+
+dashboard_directory = Path(__file__).resolve().parent / "dashboard"
+
+app.mount(
+    "/dashboard",
+    StaticFiles(directory=dashboard_directory, html=True),
+    name="dashboard",
 )
 
 

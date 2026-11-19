@@ -1,0 +1,119 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>BURHAN | Security Dashboard</title>
+
+    <link rel="stylesheet" href="style.css">
+    <script src="script.js" defer></script>
+</head>
+
+<body>
+    <div class="dashboard">
+
+        <header class="dashboard-header">
+            <div>
+                <h1>BURHAN</h1>
+                <p>Autonomous AI Agent Safety & Verification Framework</p>
+            </div>
+
+            <span class="version">Dashboard Prototype</span>
+        </header>
+
+        <main>
+            <section class="welcome-section">
+                <h2>Security Overview</h2>
+                <p>
+                    Monitor agent activity, inspect audit records,
+                    and review integrity verification results.
+                </p>
+            </section>
+
+            <section class="summary-section">
+                <h2>Audit Summary</h2>
+
+                <div class="summary-cards">
+                    <article class="card">
+                        <h3>Total Audit Records</h3>
+                        <p id="total-records">—</p>
+                    </article>
+
+                    <article class="card">
+                        <h3>Valid Signatures</h3>
+                        <p id="valid-records">—</p>
+                    </article>
+
+                    <article class="card">
+                        <h3>Invalid Signatures</h3>
+                        <p id="invalid-records">—</p>
+                    </article>
+
+                    <article class="card">
+                        <h3>Unsigned Records</h3>
+                        <p id="unsigned-records">—</p>
+                    </article>
+                </div>
+            </section>
+
+            <section class="audit-section">
+                <h2>Audit Integrity</h2>
+
+                <p>
+                    Verification results will appear here
+                    after a successful authenticated request.
+                </p>
+
+                <button id="verify-button" type="button" disabled>
+                    Verify Audit Integrity
+                </button>
+
+                <p id="verification-result" role="status">
+                    Verification is not connected yet.
+                </p>
+            </section>
+
+            <section class="records-section">
+                <h2>Recent Audit Records</h2>
+
+                <p id="audit-history-status" role="status">
+                    Audit history is not connected yet.
+                </p>
+
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Request ID</th>
+                                <th>Agent</th>
+                                <th>Action</th>
+                                <th>Decision</th>
+                                <th>Execution</th>
+                            </tr>
+                        </thead>
+
+                        <tbody id="audit-records">
+                            <tr>
+                                <td colspan="5">
+                                    No audit records loaded.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+
+        <footer class="dashboard-footer">
+            <p>
+                BURHAN — Every action accountable.
+                Every decision verifiable.
+            </p>
+            <p>Experimental framework prototype</p>
+        </footer>
+
+    </div>
+</body>
+</html>
