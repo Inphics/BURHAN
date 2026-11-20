@@ -2,7 +2,7 @@
 "use strict";
 
 // BURHAN Security Dashboard
-// Phase 4 — Audit history status management
+// Phase 4 — Audit history authentication interface
 
 document.addEventListener("DOMContentLoaded", function () {
     const verifyButton = document.getElementById("verify-button");
@@ -16,21 +16,28 @@ document.addEventListener("DOMContentLoaded", function () {
 
     const auditRecords = document.getElementById("audit-records");
 
+    const auditAccessForm = document.getElementById(
+        "audit-access-form"
+    );
+
+    const auditApiKeyInput = document.getElementById(
+        "audit-api-key"
+    );
+
     console.log("BURHAN dashboard initialized.");
 
-    // Audit verification is not connected yet.
+    // Verification is not connected yet.
     verifyButton.disabled = true;
 
     verificationResult.textContent =
         "Dashboard preview only. Audit verification is not connected.";
 
-    // Reset summary values until authenticated data is available.
+    // No authenticated audit data has been loaded.
     document.getElementById("total-records").textContent = "—";
     document.getElementById("valid-records").textContent = "—";
     document.getElementById("invalid-records").textContent = "—";
     document.getElementById("unsigned-records").textContent = "—";
 
-    // Display the current audit history status.
     function setAuditHistoryStatus(status) {
         const messages = {
             disconnected: "Audit history is not connected yet.",
@@ -38,6 +45,7 @@ document.addEventListener("DOMContentLoaded", function () {
             loaded: "Audit records loaded successfully.",
             unauthorized: "Authentication failed.",
             unavailable: "Audit history is temporarily unavailable.",
+            not_connected: "Audit API connection is not implemented yet.",
         };
 
         auditHistoryStatus.textContent =
@@ -46,18 +54,107 @@ document.addEventListener("DOMContentLoaded", function () {
         auditHistoryStatus.dataset.status = status;
     }
 
-    // Keep the table empty until we have authenticated records.
-    auditRecords.replaceChildren();
+    function showEmptyAuditTable() {
+        auditRecords.replaceChildren();
 
-    const emptyRow = document.createElement("tr");
-    const emptyCell = document.createElement("td");
+        const emptyRow = document.createElement("tr");
+        const emptyCell = document.createElement("td");
 
-    emptyCell.colSpan = 5;
-    emptyCell.textContent = "No audit records loaded.";
+        emptyCell.colSpan = 5;
+        emptyCell.textContent = "No audit records loaded.";
 
-    emptyRow.appendChild(emptyCell);
-    auditRecords.appendChild(emptyRow);
+        emptyRow.appendChild(emptyCell);
+        auditRecords.appendChild(emptyRow);
+    }
 
-    // Initial state: no audit connection has been established.
+    function displayAuditRecords(events) {
+        auditRecords.replaceChildren();
+
+        if (events.length === 0) {
+            const row = document.createElement("tr");
+            const cell = document.createElement("td");
+
+            cell.colSpan = 5;
+            cell.textContent = "No audit records found.";
+
+            row.appendChild(cell);
+            auditRecords.appendChild(row);
+            return;
+        }
+
+        events.forEach(function (event) {
+            const row = document.createElement("tr");
+
+            const values = [
+                event.request_id ?? "—",
+                event.agent ?? "—",
+                event.action ?? "—",
+                event.allowed ? "Allowed" : "Denied",
+                event.execution_status ?? "—",
+            ];
+
+            values.forEach(function (value) {
+                const cell = document.createElement("td");
+                cell.textContent = String(value);
+                row.appendChild(cell);
+            });
+
+            auditRecords.appendChild(row);
+        });
+    }
+
+    // Initial dashboard state.
+    showEmptyAuditTable();
     setAuditHistoryStatus("disconnected");
+
+    // Intercept the form before any browser submission occurs.
+    auditAccessForm.addEventListener("submit", async function (event) {
+        event.preventDefault();
+
+        const apiKey = auditApiKeyInput.value;
+        auditApiKeyInput.value = "";
+
+        // Clear previous records before requesting new data.
+        showEmptyAuditTable();
+
+        if (!apiKey.trim()) {
+            setAuditHistoryStatus("unauthorized");
+            return;
+        }
+
+        setAuditHistoryStatus("loading");
+
+        try {
+            const response = await fetch("/audit?limit=100", {
+                method: "GET",
+                headers: {
+                    "X-API-Key": apiKey,
+                },
+                cache: "no-store",
+            });
+
+            if (response.status === 401) {
+                setAuditHistoryStatus("unauthorized");
+                return;
+            }
+
+            if (!response.ok) {
+                setAuditHistoryStatus("unavailable");
+                return;
+            }
+
+            const data = await response.json();
+
+            if (!data || !Array.isArray(data.events)) {
+                setAuditHistoryStatus("unavailable");
+                return;
+            }
+
+            displayAuditRecords(data.events);
+            setAuditHistoryStatus("loaded");
+
+        } catch (error) {
+            setAuditHistoryStatus("unavailable");
+        }
+    });
 });

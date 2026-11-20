@@ -106,3 +106,27 @@ def test_fastapi_serves_dashboard_and_assets():
 
     assert js_response.status_code == 200
     assert "DOMContentLoaded" in js_response.text
+
+def test_dashboard_javascript_uses_authenticated_audit_api():
+    """Check that the dashboard requests audit data with an API key."""
+
+    dashboard_directory = (
+        Path(__file__).resolve().parents[1]
+        / "app"
+        / "dashboard"
+    )
+
+    javascript = (
+        dashboard_directory / "script.js"
+    ).read_text(encoding="utf-8")
+
+    assert 'fetch("/audit?limit=100"' in javascript
+    assert '"X-API-Key": apiKey' in javascript
+    assert "event.preventDefault()" in javascript
+
+    # Audit values must be rendered as text, not executable HTML.
+    assert "cell.textContent = String(value)" in javascript
+
+    # Credentials must not be saved to browser storage.
+    assert "localStorage" not in javascript
+    assert "sessionStorage" not in javascript

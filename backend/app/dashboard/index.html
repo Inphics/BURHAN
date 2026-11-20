@@ -82,6 +82,25 @@
                     Audit history is not connected yet.
                 </p>
 
+                <form id="audit-access-form" autocomplete="off">
+                    <label for="audit-api-key">
+                        Audit API Key
+                    </label>
+
+                    <input
+                        id="audit-api-key"
+                        name="audit-api-key"
+                        type="password"
+                        placeholder="Enter your audit API key"
+                        autocomplete="off"
+                        required
+                    >
+
+                    <button id="load-audit-button" type="submit">
+                        Load Audit Records
+                    </button>
+                </form>
+
                 <div class="table-container">
                     <table>
                         <thead>
