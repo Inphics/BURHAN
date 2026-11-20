@@ -9,97 +9,185 @@ BURHAN is an independently developed Python framework prototype for evaluating A
 
 The project explores how AI agent systems can become more transparent, accountable, and easier to inspect.
 
+BURHAN also includes an experimental web dashboard for viewing authenticated audit history and, in future development stages, reviewing audit integrity and agent activity.
+
 > **Project Notice:** BURHAN is a proprietary research and development project made publicly visible for portfolio demonstration and technical review. It is not open-source software, and no general license to use, modify, or redistribute its source code is granted. See [Copyright and Usage](#copyright-and-usage).
 
 ## Why BURHAN?
 
-The name **BURHAN** originates from the Arabic word **بُرْهَان (burhān)**, meaning *proof*, *evidence*, or *clear demonstration*. Adopted into Turkish as **Burhan**, where it is also used as a personal name, the word preserves its association with evidence and the demonstration of truth. This shared Arabic–Turkish linguistic heritage reflects the project's central philosophy: trust should be supported by evidence, and decisions should be open to examination.
+The name **BURHAN** originates from the Arabic word **بُرْهَان (burhān)**, meaning *proof*, *evidence*, or *clear demonstration*.
+
+Adopted into Turkish as **Burhan**, where it is also used as a personal name, the word preserves its association with evidence and the demonstration of truth.
+
+This shared Arabic–Turkish linguistic heritage reflects the project's central philosophy: trust should be supported by evidence, and decisions should be open to examination.
 
 BURHAN is built around the idea that trustworthy AI systems should produce more than decisions. They should provide understandable reasons, enforceable boundaries, and inspectable records of their behavior.
 
 ## Current Features
 
-- **Policy Evaluation:** Checks whether an authenticated agent is permitted to perform an action.
+### Policy Evaluation and Enforcement
+
+- **Policy Evaluation:** Checks whether an authenticated AI agent is permitted to perform a requested action.
 - **JSON Policy Configuration:** Loads permissions from `backend/config/policies.json`, validates the configuration, and denies unlisted agents and actions by default.
-- **Permission Management:** Supports granting and revoking permissions in the running policy engine; these changes do not automatically update the JSON file.
-- **API-Key Agent Authentication:** Associates configured API keys with supported agent identities.
-- **Enforcement Prototype:** Checks permissions before simulating permitted actions; no external tools or real-world operations are executed.
-- **Structured Audit Logging:** Records UTC timestamps, agents, actions, decisions, reasons, execution statuses, and request IDs.
-- **SQLite Persistence:** Retains audit events between application restarts.
-- **Optional HMAC-SHA256 Audit Signing:** Signs audit fields when `BURHAN_AUDIT_HMAC_KEY` is configured; strict signing can be required explicitly.
-- **Audit Integrity Verification:** Checks individual and collected signatures, distinguishing `valid`, `invalid`, and `unsigned` records.
-- **Protected Audit APIs:** Offers authenticated `GET /audit` and `GET /audit/verify` endpoints, both disabled unless audit inspection is enabled.
-- **Failure Handling:** Includes tested safeguards for authentication failures, invalid input, malformed signatures, missing configuration, and audit database failures.
-- **Automated Tests:** **93 passing backend tests** at the latest completed Stage 28 test run.
+- **Permission Management:** Supports granting and revoking permissions within the running policy engine.
+- **Agent Authentication:** Uses environment-configured API keys to identify supported agent roles.
+- **Enforcement Prototype:** Checks permissions before simulating permitted actions. Real external tool execution is not implemented.
+
+### Audit Logging and Verification
+
+- **Structured Audit Logging:** Records UTC timestamps, agent identities, actions, decisions, reasons, execution statuses, and request IDs.
+- **SQLite Persistence:** Stores audit records in a local SQLite database.
+- **HMAC-SHA256 Audit Signing:** Supports signing audit events when a secret key is configured.
+- **Audit Integrity Verification:** Detects changes to inspected, signed audit fields and classifies records as `valid`, `invalid`, or `unsigned`.
+- **Protected Audit Inspection:** Provides an authenticated `GET /audit` endpoint.
+- **Verification API:** Provides an authenticated `GET /audit/verify` endpoint.
+- **Security Failure Handling:** Includes safeguards for missing credentials, malformed signatures, invalid configuration, and unavailable audit storage.
+
+### Web Dashboard
+
+- **Dashboard Interface:** Provides an experimental web interface built using HTML, CSS, and JavaScript.
+- **FastAPI Integration:** Serves the dashboard through the existing FastAPI application.
+- **Responsive Design:** Includes a dark-themed layout, summary cards, audit status messages, and an audit records table.
+- **Authenticated Audit History Viewer:** Allows an authorized user to retrieve recent audit records using the existing audit API.
+- **Safe Text Rendering:** Displays audit record values using DOM text operations rather than interpreting them as HTML.
+- **Audit Loading States:** Displays messages for successful retrieval, authentication failures, and unavailable audit history.
+- **Dashboard Foundation Tests:** Checks essential HTML elements, static assets, and FastAPI dashboard delivery.
+
+**Current dashboard limitation:** The audit history viewer is functional, but the dashboard's integrity verification button and signature summary cards are not yet connected to the verification API.
+
+### Automated Testing
+
+**99 backend tests passing** at the latest completed Stage 31 test run.
+
+Tests cover policy behavior, authentication, simulated enforcement, SQLite persistence, audit integrity, API security, failure scenarios, and initial dashboard functionality.
 
 ## Project Status
 
-**Status: Experimental backend prototype | Public portfolio demonstration | All rights reserved**
+**Status: Experimental backend and dashboard prototype | Public portfolio demonstration | All rights reserved**
 
-BURHAN is under active research and development. The current application now reports **version `0.3.0`**. The corresponding GitHub release is being prepared and has not yet been published.
+BURHAN is under active research and development.
 
-The framework includes API-key authentication, JSON-based authorization rules, simulated enforcement, persistent audit logging, and HMAC-based integrity checks. These are prototype mechanisms, not proof of production-grade security.
+The current application version is **`0.3.0`**.
 
-**BURHAN is not production-ready and should not be relied upon as the sole security boundary for real AI agents or sensitive systems.**
+The project has completed its initial backend foundation, API hardening, and audit verification development phases.
 
-Public availability is intended for portfolio presentation and professional evaluation; it does not grant permission to use, modify, redistribute, or incorporate the source code into other projects.
+**Phase 4 — Dashboard and Developer Experience is in progress.**
+
+The dashboard foundation and authenticated audit history viewer have been implemented. Further development will focus on displaying integrity verification results, visualizing agent activity, and strengthening dashboard security.
+
+BURHAN remains a research and development prototype.
+
+**It is not production-ready and should not be relied upon as the sole security boundary for real-world AI agent systems.**
+
+Public availability is intended for portfolio presentation and professional evaluation. It does not grant permission to use, modify, redistribute, or incorporate the source code into other projects.
 
 ## Architecture
 
-BURHAN's backend consists of the following components:
+BURHAN combines a FastAPI backend with a lightweight browser-based dashboard.
+
+### Main Components
 
 | Component | Location | Responsibility |
 |---|---|---|
-| FastAPI Application | `backend/app/main.py` | Exposes endpoints and handles requests |
-| Agent Authentication | `backend/app/security/agent_auth.py` | Resolves an agent identity from its API key |
-| Policy Engine | `backend/app/policies/policy_engine.py` | Loads and checks configured permissions |
-| Policy Configuration | `backend/config/policies.json` | Defines allowed actions for each agent |
-| Enforcement Engine | `backend/app/execution/enforcement_engine.py` | Checks authorization and coordinates simulated execution |
+| FastAPI Application | `backend/app/main.py` | API endpoints, request handling, and dashboard serving |
+| Agent Authentication | `backend/app/security/agent_auth.py` | Resolves agent identities from configured API keys |
+| Policy Engine | `backend/app/policies/policy_engine.py` | Loads and evaluates agent permissions |
+| Policy Configuration | `backend/config/policies.json` | Defines permitted actions |
+| Enforcement Engine | `backend/app/execution/enforcement_engine.py` | Coordinates authorization and simulated execution |
+| Action Executor | `backend/app/execution/action_executor.py` | Simulates permitted actions |
 | Audit Logger | `backend/app/evaluation/audit_logger.py` | Creates and optionally signs audit events |
 | Audit Database | `backend/app/evaluation/audit_database.py` | Stores and retrieves SQLite audit records |
-| Audit Integrity | `backend/app/evaluation/audit_integrity.py` | Calculates and verifies SHA-256 and HMAC-SHA256 values |
+| Audit Integrity | `backend/app/evaluation/audit_integrity.py` | Calculates and verifies audit signatures |
+| Dashboard HTML | `backend/app/dashboard/index.html` | Defines the dashboard structure |
+| Dashboard CSS | `backend/app/dashboard/style.css` | Controls dashboard appearance |
+| Dashboard JavaScript | `backend/app/dashboard/script.js` | Handles dashboard interactions and authenticated audit retrieval |
 
-### Request Flow
+### Backend Request Flow
 
 ```text
-Authenticated API client
-         |
-         v
-     FastAPI API
-         |
-         v
-  Agent authentication
-         |
-         v
-  JSON-backed policy engine
-         |
-         v
-    Allow or deny
-         |
-         +---- POST /evaluate: record decision, return result
-         |
-         +---- POST /enforce: record request, simulate if allowed,
-         |                   record final outcome, return result
-         |
-         v
-       SQLite audit log
-         |
-         +---- GET /audit: inspect recent records (authorized)
-         |
-         +---- GET /audit/verify: verify returned signatures (authorized)
+Authenticated AI Agent / API Client
+                |
+                v
+         FastAPI Application
+                |
+                v
+        Agent Authentication
+                |
+                v
+          Policy Engine
+                |
+                v
+       Allow / Deny Decision
+                |
+       +--------+---------+
+       |                  |
+       v                  v
+   /evaluate           /enforce
+       |                  |
+       |                  v
+       |           Simulated Execution
+       |                  |
+       +--------+---------+
+                |
+                v
+           Audit Logger
+                |
+                v
+          SQLite Database
 ```
 
-For each authenticated `POST /enforce` call, BURHAN assigns a request ID shared by its initial and final audit records. The pre-execution record is written before the enforcement engine is invoked. Execution is **simulated**, not performed against external tools.
+For authenticated enforcement requests, BURHAN generates a request ID that associates the initial and final audit records.
+
+### Dashboard Request Flow
+
+```text
+       Web Browser
+            |
+            v
+    BURHAN Dashboard
+    HTML / CSS / JavaScript
+            |
+            v
+    User supplies audit
+       API access key
+            |
+            v
+    GET /audit?limit=100
+            |
+            v
+      FastAPI Backend
+            |
+            v
+    API Key Authentication
+            |
+            v
+     SQLite Audit Data
+            |
+            v
+    JSON Audit Response
+            |
+            v
+    Dashboard Records Table
+```
+
+The dashboard uses the existing authenticated audit endpoint.
+
+The audit API key is entered by the authorized user rather than hardcoded into the dashboard source files.
+
+The HMAC signing key remains on the server and is not sent to browser JavaScript.
+
+**Security distinction:** Serving the dashboard page does not itself authorize access to audit records. The backend must authenticate each protected API request.
 
 ## Technical Setup and Development Reference
 
-> **Usage restriction:** These instructions document technical setup for transparency and professional evaluation. They do not grant permission to use, modify, or redistribute BURHAN. See [Copyright and Usage](#copyright-and-usage).
+> **Usage restriction:** The following instructions document the project's technical setup for transparency and professional evaluation. They do not grant permission to use, modify, or redistribute BURHAN. See [Copyright and Usage](#copyright-and-usage).
 
 ### Prerequisites
 
 - Python 3.11 or newer
 - Git
 - A terminal
+- A modern web browser
 
 Development and testing have primarily been performed in GitHub Codespaces. Other environments may require adjustments.
 
@@ -112,14 +200,14 @@ cd BURHAN
 
 ### 2. Create a Virtual Environment
 
-Linux, macOS, or GitHub Codespaces:
+On Linux, macOS, or GitHub Codespaces:
 
 ```bash
 python -m venv .venv
 source .venv/bin/activate
 ```
 
-Windows PowerShell:
+On Windows PowerShell:
 
 ```powershell
 python -m venv .venv
@@ -128,40 +216,181 @@ python -m venv .venv
 
 ### 3. Install Dependencies
 
+From the project root:
+
 ```bash
 python -m pip install -r backend/requirements.txt
 ```
 
-### 4. Configure Local API Keys
+### 4. Configure API Authentication
 
-The example below uses **development-only placeholders**. Replace these with separately generated, strong secrets in an authorized development environment. Never commit real keys to GitHub.
+BURHAN uses environment variables for its API credentials.
+
+Relevant variables include:
+
+| Environment Variable | Purpose |
+|---|---|
+| `BURHAN_RESEARCH_AGENT_KEY` | API key for `research_agent` |
+| `BURHAN_ADMIN_AGENT_KEY` | API key for `admin_agent` |
+| `BURHAN_AUDIT_API_KEY` | API key for protected audit inspection |
+| `BURHAN_ENABLE_AUDIT_API` | Enables audit API access when set to `true` |
+| `BURHAN_AUDIT_HMAC_KEY` | Secret used to sign and verify audit records |
+| `BURHAN_REQUIRE_AUDIT_SIGNING` | Requires signing when set to `true` |
+| `BURHAN_AUDIT_DB_PATH` | Optional audit database path |
+
+For local development, configure separate, strong secrets.
+
+Example commands:
 
 ```bash
 export BURHAN_RESEARCH_AGENT_KEY="replace-with-a-unique-agent-secret"
 export BURHAN_ADMIN_AGENT_KEY="replace-with-another-unique-agent-secret"
 export BURHAN_AUDIT_API_KEY="replace-with-a-unique-audit-api-secret"
 export BURHAN_AUDIT_HMAC_KEY="replace-with-a-separate-hmac-secret"
-export BURHAN_REQUIRE_AUDIT_SIGNING=true
+
 export BURHAN_ENABLE_AUDIT_API=true
+export BURHAN_REQUIRE_AUDIT_SIGNING=true
 ```
 
-Setting `BURHAN_ENABLE_AUDIT_API=true` enables both audit routes. Omit it or set it to `false` to keep audit inspection disabled. `BURHAN_REQUIRE_AUDIT_SIGNING=true` requires an HMAC key before the audit logger can save a new event. Both flags use the exact lowercase value `true`.
+These are placeholders, not real credentials.
 
-These exports apply to the current shell session. Keep Codespaces forwarded ports **private**, use HTTPS for any network access, and do not expose prototype endpoints publicly.
+Never commit actual API keys or HMAC secrets to the repository.
 
-### 5. Start the API
+Shell environment variables configured using `export` may need to be configured again after restarting a Codespace.
+
+### 5. Start the FastAPI Application
+
+From the project root:
 
 ```bash
-python -m uvicorn backend.app.main:app --reload
+python -m uvicorn backend.app.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
-Local addresses:
+The application runs locally at:
 
 - API: `http://127.0.0.1:8000`
 - Health check: `http://127.0.0.1:8000/health`
-- Interactive API documentation: `http://127.0.0.1:8000/docs`
+- API documentation: `http://127.0.0.1:8000/docs`
+- Dashboard: `http://127.0.0.1:8000/dashboard/`
 
-### 6. Evaluate an Agent Action
+For GitHub Codespaces, open port `8000` through the **Ports** tab and keep its visibility **Private**.
+
+### 6. Open the Dashboard
+
+With FastAPI running, navigate to:
+
+```text
+http://127.0.0.1:8000/dashboard/
+```
+
+The initial dashboard includes:
+
+- BURHAN branding and project description.
+- Security Overview section.
+- Audit Summary cards.
+- Audit Integrity section.
+- Recent Audit Records table.
+- Audit API Key input and Load Audit Records button.
+
+The dashboard is part of the existing FastAPI application. No separate frontend development server is required.
+
+### 7. Load Audit History
+
+Before loading audit history, ensure:
+
+1. `BURHAN_ENABLE_AUDIT_API=true` is configured.
+2. `BURHAN_AUDIT_API_KEY` is configured on the FastAPI server.
+3. The dashboard is running through the same FastAPI application.
+4. The Codespaces forwarded port is private.
+
+Open `/dashboard/`, enter the configured audit API key in the **Audit API Key** field, and click **Load Audit Records**.
+
+The dashboard sends an authenticated request to:
+
+```text
+GET /audit?limit=100
+```
+
+The request includes the audit API key in the `X-API-Key` HTTP header.
+
+If authentication succeeds, the dashboard displays the returned records.
+
+If the key is incorrect, the interface displays an authentication failure message.
+
+If audit inspection is disabled or unavailable, the dashboard displays an unavailable status.
+
+**Security note:** The current development dashboard accepts an API key in the browser and sends it with an authenticated request. The key is not deliberately saved to browser storage, but it is temporarily handled in JavaScript memory. This is not a production login system.
+
+Use it only through a trusted, protected connection.
+
+### 8. Run Automated Tests
+
+From the project root:
+
+```bash
+python -m pytest backend/tests/ -v
+```
+
+Latest completed test result:
+
+**99 tests passed.**
+
+The count may increase as Phase 4 development continues.
+
+## Policy Configuration
+
+BURHAN loads default agent permissions from:
+
+`backend/config/policies.json`
+
+Example:
+
+```json
+{
+  "permissions": {
+    "research_agent": [
+      "read",
+      "report"
+    ],
+    "admin_agent": [
+      "read",
+      "report",
+      "update",
+      "delete"
+    ]
+  }
+}
+```
+
+The policy engine validates the configuration during initialization.
+
+It checks that the configuration contains the expected structure, supported top-level fields, valid agent names, and lists of non-empty action names.
+
+Unknown agents and unauthorized actions are denied by default.
+
+A missing or malformed policy configuration causes initialization to fail rather than silently replacing the policy with permissive defaults.
+
+Permission changes performed using the engine's `grant_permission()` and `revoke_permission()` methods affect the running instance and are not automatically written back to the JSON file.
+
+**Security limitation:** Anyone who can modify the policy configuration file can potentially alter authorization decisions. Protect deployment and repository write access accordingly.
+
+## API Reference
+
+| Method | Endpoint | Description | Authentication |
+|---|---|---|---|
+| `GET` | `/` | Returns project and API information | Not required |
+| `GET` | `/health` | Checks basic application health | Not required |
+| `POST` | `/evaluate` | Evaluates agent permissions | Agent API key |
+| `POST` | `/enforce` | Evaluates and simulates permitted actions | Agent API key |
+| `GET` | `/audit` | Returns stored audit records | Audit API key |
+| `GET` | `/audit/verify` | Verifies stored audit signatures | Audit API key and server-side HMAC key |
+| `GET` | `/dashboard/` | Serves the dashboard interface | Static page; audit data remains protected |
+
+### POST /evaluate
+
+Evaluates whether an authenticated agent is permitted to perform a requested action.
+
+Example:
 
 ```bash
 curl -X POST http://127.0.0.1:8000/evaluate \
@@ -170,7 +399,7 @@ curl -X POST http://127.0.0.1:8000/evaluate \
   -d '{"action":"delete"}'
 ```
 
-Example response (reason text comes from the active policy):
+Example response:
 
 ```json
 {
@@ -179,9 +408,13 @@ Example response (reason text comes from the active policy):
 }
 ```
 
-The agent identity is derived from the API key, **not** provided by the request body.
+The API determines the agent identity from the API key, not from the JSON request body.
 
-### 7. Enforce an Agent Action (Simulation)
+### POST /enforce
+
+Authenticates the agent, evaluates permissions, and simulates the action when permitted.
+
+Example:
 
 ```bash
 curl -X POST http://127.0.0.1:8000/enforce \
@@ -190,94 +423,32 @@ curl -X POST http://127.0.0.1:8000/enforce \
   -d '{"action":"read"}'
 ```
 
-The response describes the policy decision and simulated outcome. An `executed` value of `true` means **simulation succeeded**, not that a real operation occurred.
+BURHAN records an initial audit event before attempting enforcement and a final event containing the outcome.
 
-### 8. Inspect Audit Records
+The two records share a generated request ID.
 
-With audit inspection enabled and an audit API key configured:
+**Important:** An `executed` value of `true` indicates successful simulation only. BURHAN does not execute real external agent tools.
+
+### GET /audit
+
+Retrieves stored audit events in reverse insertion order.
+
+Disabled unless:
+
+```bash
+export BURHAN_ENABLE_AUDIT_API=true
+```
+
+A matching audit API key is also required.
+
+Example:
 
 ```bash
 curl http://127.0.0.1:8000/audit?limit=10 \
   -H "X-API-Key: $BURHAN_AUDIT_API_KEY"
 ```
 
-### 9. Verify Audit Records
-
-```bash
-curl http://127.0.0.1:8000/audit/verify?limit=10 \
-  -H "X-API-Key: $BURHAN_AUDIT_API_KEY"
-```
-
-A response summarizes the inspected records as `valid`, `invalid`, or `unsigned`. The verification endpoint requires `BURHAN_AUDIT_HMAC_KEY` on the server. It **does not** return that secret.
-
-### 10. Run Automated Tests
-
-```bash
-python -m pytest backend/tests/ -v
-```
-
-**Latest verified result: 93 passing backend tests** after Stage 28. Test counts may change during subsequent development.
-
-## Policy Configuration
-
-Default permissions are stored in `backend/config/policies.json`:
-
-```json
-{
-  "permissions": {
-    "research_agent": ["read", "report"],
-    "admin_agent": ["read", "report", "update", "delete"]
-  }
-}
-```
-
-The policy engine validates the configuration at startup, including the expected `permissions` object, lists of non-empty action strings, non-empty agent names, and supported top-level fields. Missing or malformed configuration causes initialization to fail rather than silently reverting to permissive hardcoded rules.
-
-Unknown agents and actions not explicitly listed are denied by default. `grant_permission()` and `revoke_permission()` change the in-memory engine state; they are **not** a persistent policy administration interface. Protect access to the configuration file: whoever can change it can alter authorization rules.
-
-## API Reference
-
-| Method | Endpoint | Description | Access |
-|---|---|---|---|
-| `GET` | `/` | Returns project information and API status | No API key required |
-| `GET` | `/health` | Returns basic application health | No API key required |
-| `POST` | `/evaluate` | Evaluates an action and logs the decision | Agent API key |
-| `POST` | `/enforce` | Evaluates and simulates an allowed action, with audit records | Agent API key |
-| `GET` | `/audit` | Retrieves recent stored audit events | Audit API enabled and audit API key |
-| `GET` | `/audit/verify` | Verifies HMAC signatures on recent audit events | Audit API enabled, audit API key, and server HMAC key |
-
-### POST /evaluate
-
-The JSON body contains an action:
-
-```json
-{
-  "action": "read"
-}
-```
-
-Clients supply `X-API-Key` to identify the agent. A missing or invalid agent key returns HTTP `401`. Successful authorization checks return a policy decision with `allowed` and `reason` fields; denied actions may still yield HTTP `200` with `allowed: false`.
-
-### POST /enforce
-
-Accepts the same JSON body and agent authentication header. The endpoint creates an initial audit record before attempting enforcement, checks the policy, and simulates the action only when permitted. A final audit event records the outcome.
-
-Possible audit execution statuses include:
-
-| Status | Meaning |
-|---|---|
-| `not_attempted` | Execution has not been attempted or a policy-only evaluation occurred |
-| `blocked` | Policy denied the requested action |
-| `simulated` | Allowed action was successfully simulated |
-| `failed` | An allowed action simulation failed |
-
-The `executed` response field indicates simulated execution only. BURHAN does not perform file deletion, system changes, external commands, or other real-world tool actions.
-
-### GET /audit
-
-Disabled by default. When enabled, requires the server's `BURHAN_AUDIT_API_KEY` and the matching `X-API-Key` request header.
-
-The endpoint returns recent records in reverse insertion order:
+Illustrative response:
 
 ```json
 {
@@ -285,28 +456,37 @@ The endpoint returns recent records in reverse insertion order:
   "events": [
     {
       "id": 1,
-      "timestamp": "2026-11-19T12:00:00+00:00",
+      "timestamp": "2026-11-20T12:00:00+00:00",
       "agent": "research_agent",
       "action": "read",
       "allowed": true,
       "reason": "Agent 'research_agent' is permitted to perform 'read'.",
-      "execution_status": "simulated",
-      "request_id": "example-request-id",
+      "execution_status": "not_attempted",
+      "request_id": null,
       "event_hmac": null
     }
   ]
 }
 ```
 
-*Illustrative response:* `event_hmac: null` represents an unsigned event; signed events contain a 64-character hexadecimal signature. The endpoint **retrieves records but does not automatically verify their signatures**.
+The response format includes the stored signature field, if available.
 
-The optional `limit` query parameter defaults to `100` and accepts values from `1` through `100`.
+The endpoint does **not** automatically verify the integrity of returned records.
+
+The optional `limit` parameter accepts values from `1` to `100`, with a default of `100`.
 
 ### GET /audit/verify
 
-Uses the same audit access controls and additionally requires the server-side `BURHAN_AUDIT_HMAC_KEY`.
+Authenticates the caller and verifies the HMAC signatures of the returned audit records.
 
-Example response:
+Example:
+
+```bash
+curl http://127.0.0.1:8000/audit/verify?limit=10 \
+  -H "X-API-Key: $BURHAN_AUDIT_API_KEY"
+```
+
+Illustrative response:
 
 ```json
 {
@@ -315,47 +495,152 @@ Example response:
   "invalid": 1,
   "unsigned": 1,
   "results": [
-    {"id": 3, "request_id": "example-3", "status": "valid"},
-    {"id": 2, "request_id": "example-2", "status": "invalid"},
-    {"id": 1, "request_id": null, "status": "unsigned"}
+    {
+      "id": 3,
+      "request_id": "request-3",
+      "status": "valid"
+    },
+    {
+      "id": 2,
+      "request_id": "request-2",
+      "status": "invalid"
+    },
+    {
+      "id": 1,
+      "request_id": null,
+      "status": "unsigned"
+    }
   ]
 }
 ```
 
-- **`valid`**: A stored signature matches the signed record fields using the configured HMAC key.
-- **`invalid`**: A stored signature is malformed or does not match the record.
-- **`unsigned`**: The record has no signature (`null`), as with historical records.
+Verification statuses:
 
-The endpoint verifies **only the latest returned records**, up to the `limit` (default `100`, range `1`–`100`). Its `total` is the number examined, **not** the complete database count. A result of zero invalid records is not evidence that missing or deleted records never existed.
+| Status | Meaning |
+|---|---|
+| `valid` | The stored HMAC matches the signed audit fields |
+| `invalid` | The signature is malformed or does not match |
+| `unsigned` | No HMAC signature exists |
 
-Expected error handling includes HTTP `403` when audit inspection is disabled or its API key is not configured, HTTP `401` for missing or incorrect credentials, HTTP `503` when the HMAC verification key or audit database is unavailable, and HTTP `422` for invalid query limits.
+The endpoint requires the server-side `BURHAN_AUDIT_HMAC_KEY`.
 
-### Interactive API Documentation
+It verifies only the returned records, up to the requested limit. It does not prove the complete audit history is intact.
 
-FastAPI generates development documentation at:
+### GET /dashboard/
 
-- Swagger UI: `http://127.0.0.1:8000/docs`
-- OpenAPI schema: `http://127.0.0.1:8000/openapi.json`
+Serves the experimental BURHAN web dashboard.
+
+The static dashboard files are available through:
+
+```text
+/dashboard/
+/dashboard/style.css
+/dashboard/script.js
+```
+
+The dashboard interface is accessible separately from privileged audit data.
+
+Access to `/audit` and `/audit/verify` remains controlled by the FastAPI backend.
+
+The current dashboard supports authenticated audit history retrieval and safe display of returned records.
+
+Dashboard-based HMAC verification and visual summaries are planned for later Phase 4 stages.
+
+## Dashboard Architecture and Current Capabilities
+
+### Frontend Structure
+
+The dashboard uses three files:
+
+```text
+backend/app/dashboard/
+├── index.html
+├── style.css
+└── script.js
+```
+
+**`index.html` — Structure**
+
+Defines the dashboard sections, navigation-free page layout, summary cards, audit history table, verification controls, and API key form.
+
+**`style.css` — Appearance**
+
+Provides dark-themed styling, responsive layouts, tables, buttons, spacing, and typography.
+
+**`script.js` — Behaviour**
+
+Initializes the dashboard, manages loading states, handles form submission, makes authenticated audit requests, and renders returned records.
+
+### Current Audit History Viewer
+
+The audit history viewer displays:
+
+| Column | Description |
+|---|---|
+| Request ID | Identifies related enforcement records, when present |
+| Agent | Agent identity associated with the event |
+| Action | Requested action |
+| Decision | Allowed or denied |
+| Execution | Recorded execution status |
+
+Older records may not contain a request ID.
+
+The dashboard uses JavaScript `textContent` to display audit fields as text rather than executable HTML.
+
+This reduces the risk of treating client-controlled audit values as markup.
+
+### Current Dashboard Limitations
+
+- The Audit Summary cards currently display placeholders rather than live metrics.
+- The **Verify Audit Integrity** button is disabled.
+- The dashboard does not yet invoke `/audit/verify`.
+- Displayed audit records are not automatically verified when loaded.
+- There is no complete production authentication session or login system.
+- The current audit history request is limited to the latest 100 records.
+- Dashboard authentication relies on the existing audit API key mechanism.
+- The interface should be used for trusted development and demonstration, not production operations.
+
+These capabilities will be expanded in subsequent Phase 4 stages.
 
 ## Enforcement Audit Safeguards
 
-For authenticated requests to `/enforce`, BURHAN:
+BURHAN's enforcement workflow is designed to improve the accountability of simulated agent actions.
 
-1. Attempts to save a pre-execution audit record before invoking the enforcement engine.
-2. Returns HTTP `503 Service Unavailable` and does not call the executor if the initial audit write fails.
-3. Evaluates the requested action against the loaded policy.
-4. Simulates permitted actions; denied actions do not reach the executor.
-5. Attempts to save a final audit record containing the policy decision and execution status.
+For authenticated `/enforce` requests:
 
-The initial and final records for an enforcement request share a generated `request_id`, allowing related records to be associated.
+1. BURHAN generates a request ID.
+2. It attempts to save an initial audit record before invoking the enforcement engine.
+3. If the initial audit write fails, the endpoint returns HTTP `503` and does not call the executor.
+4. The policy engine evaluates whether the action is permitted.
+5. Permitted actions may be simulated.
+6. BURHAN attempts to save a final audit event describing the outcome.
 
-**Important qualifications:** The pre-execution record currently stores `allowed: false` as a pending placeholder, **not** as a final policy denial. If the final audit write fails, the API returns `503`, but a permitted action might already have been simulated. Audit persistence and simulation are not a transactional unit.
+### Audit Execution Statuses
+
+| Status | Description |
+|---|---|
+| `not_attempted` | Execution has not been attempted |
+| `blocked` | The requested action was denied |
+| `simulated` | A permitted action was successfully simulated |
+| `failed` | Simulation of a permitted action failed |
+
+### Important Limitations
+
+The pre-execution audit record currently uses `allowed: false` as a placeholder while the decision is pending.
+
+This does not necessarily represent a final policy denial.
+
+If the final audit write fails, the API returns HTTP `503`, but the simulated action may already have completed.
+
+Audit persistence and simulated execution are not transactional.
 
 ## Audit Integrity and Security Model
 
 ### HMAC-SHA256 Signing
 
-When `BURHAN_AUDIT_HMAC_KEY` is set, newly logged events receive a keyed HMAC-SHA256 signature covering these fields:
+BURHAN can sign audit records using HMAC-SHA256.
+
+When `BURHAN_AUDIT_HMAC_KEY` is configured, new audit events receive a signature covering:
 
 - `timestamp`
 - `agent`
@@ -365,38 +650,83 @@ When `BURHAN_AUDIT_HMAC_KEY` is set, newly logged events receive a keyed HMAC-SH
 - `execution_status`
 - `request_id`
 
-Verification recomputes the signature using the same protected secret and checks whether the signed fields have changed. The database's `id` is **not** part of the signed content.
+The verification system recalculates the signature and compares it with the stored HMAC.
 
-`BURHAN_REQUIRE_AUDIT_SIGNING=true` enables strict signing behavior: the logger refuses to save new events if the HMAC key is missing. Without strict signing, a missing HMAC key still permits unsigned events for prototype compatibility. **Strict mode is optional, not the default.**
+This can detect changes to inspected signed fields when the secret key remains protected.
 
-The HMAC key must be protected independently of the SQLite database and source repository. Never commit the secret or display it in audit responses.
+### Strict Signing Mode
 
-### Known Limitations
+Strict signing can be enabled with:
 
-1. **Simulated enforcement only:** BURHAN does not control arbitrary external AI tools or provide a production sandbox.
-2. **Prototype identity model:** API keys identify configured agent roles; there is no full identity lifecycle, role administration, or production authentication infrastructure.
-3. **Not tamper-proof storage:** HMAC detects changes to inspected signed fields if the secret stays protected; it does **not** detect deletion, reordering, replay, rollback, or wholesale database replacement.
-4. **Unsigned historical events:** Records created without an HMAC cannot be cryptographically verified. They are reported as `unsigned`, not `valid`.
-5. **Limited verification scope:** `/audit/verify` checks only returned records, not whether the audit history is complete. `/audit` does not automatically perform verification.
-6. **Optional strict signing:** The default prototype configuration can still write unsigned events if the HMAC key is absent.
-7. **Configuration trust:** JSON policies are validated but are not independently signed or protected against modification by someone with repository or deployment access.
-8. **Operational hardening:** The prototype does not provide comprehensive rate limiting, monitoring, recovery controls, append-only external audit storage, or production-grade secret management.
-9. **Audit completion limitations:** A failed final audit write can leave the recorded outcome incomplete after a simulation.
+```bash
+export BURHAN_REQUIRE_AUDIT_SIGNING=true
+```
 
-BURHAN should not be used as the sole security boundary for production AI agents or sensitive systems.
+When strict signing is enabled, the audit logger refuses to save new events if the HMAC key is missing.
 
-### Responsible Development
+Without strict signing, the prototype may still create unsigned audit records for development compatibility.
 
-BURHAN is intended for portfolio demonstration, professional evaluation, research into agent security architecture, and incremental testing of accountability mechanisms. Security concerns may be reported to the repository owner through an appropriate private communication channel.
+Strict signing is **not enabled by default**.
+
+### Known Security Limitations
+
+**1. Simulated Enforcement Only**
+
+BURHAN does not intercept or control arbitrary external AI agent tool calls.
+
+**2. Prototype Authentication**
+
+API keys identify supported agent roles, but BURHAN does not provide a complete production identity and session-management system.
+
+**3. No Tamper-Proof Audit Storage**
+
+HMAC verification can detect modifications to inspected signed record fields, but it cannot detect deletion, reordering, replay, database rollback, or wholesale database replacement.
+
+**4. Unsigned Historical Records**
+
+Records without HMAC signatures cannot be cryptographically verified.
+
+**5. Limited Verification Scope**
+
+The verification endpoint checks only records returned by the database query.
+
+A result of zero invalid signatures does not prove that no records were deleted.
+
+**6. Optional Strict Signing**
+
+The prototype can still store unsigned records unless strict signing is enabled.
+
+**7. Policy Configuration Trust**
+
+The JSON configuration is validated but is not independently protected against unauthorized modification by someone with deployment or repository write access.
+
+**8. Dashboard Authentication**
+
+The dashboard currently uses an API key supplied through a browser form.
+
+It does not provide production-grade login sessions, credential lifecycle controls, or comprehensive browser security hardening.
+
+**9. Limited Operational Hardening**
+
+BURHAN does not yet provide comprehensive rate limiting, monitoring, external append-only audit storage, recovery controls, or production-grade secret management.
+
+**10. Incomplete Audit Outcomes**
+
+A failed final audit write may leave the recorded outcome incomplete after simulated execution.
+
+**BURHAN remains experimental software and should not be used as the sole security boundary for production AI agents or sensitive systems.**
 
 ## Development Roadmap
+
+BURHAN is developed incrementally, emphasizing clear architecture, testing, and responsible security engineering.
 
 ### Phase 1 — Backend Foundation (Completed)
 
 - [x] Establish the Python project structure.
 - [x] Implement a permission-based policy engine.
 - [x] Support in-memory permission granting and revocation.
-- [x] Create a FastAPI backend and action evaluation endpoint.
+- [x] Create a FastAPI backend.
+- [x] Implement action evaluation through the REST API.
 - [x] Record policy decisions with UTC timestamps.
 - [x] Persist audit events using SQLite.
 - [x] Provide optional audit inspection.
@@ -404,38 +734,102 @@ BURHAN is intended for portfolio demonstration, professional evaluation, researc
 
 ### Phase 2 — Documentation and Backend Hardening (Completed)
 
-- [x] Document the framework's purpose, architecture, and limitations.
-- [x] Add setup and API reference documentation.
+- [x] Document the framework's purpose and architecture.
+- [x] Add technical setup and API reference documentation.
+- [x] Document the security model and limitations.
 - [x] Expand authentication, authorization, and failure-path tests.
 - [x] Configure SQLite audit database paths and API query limits.
 - [x] Add API-key authentication for agent and audit access.
 - [x] Introduce simulated enforcement and audit safeguards.
 - [x] Publish the `v0.2.0` backend prototype release.
 
-### Phase 3 — Agent Safety and Verification Hardening (In Progress)
+### Phase 3 — Agent Safety and Verification Hardening (Completed)
 
-- [x] **Stage 24:** Add request IDs to associate enforcement audit records.
-- [x] **Stage 25:** Add HMAC audit signing, verification, and optional strict signing.
-- [x] **Stage 26:** Load and validate JSON policy configuration files.
-- [x] **Stage 27:** Add an authenticated audit verification API.
-- [x] **Stage 28:** Expand security tests and failure handling (**93 passing tests**).
-- [x] **Stage 29:** Finalize documentation, update version metadata, and publish `v0.3.0`.
+- [x] **Stage 24:** Add request IDs for enforcement audit records.
+- [x] **Stage 25:** Implement HMAC audit signing and verification.
+- [x] **Stage 26:** Introduce JSON policy configuration and validation.
+- [x] **Stage 27:** Implement an authenticated audit verification API.
+- [x] **Stage 28:** Expand security testing and failure handling.
+- [x] **Stage 29:** Update documentation and prepare the v0.3.0 release.
 
-### Phase 4 — Dashboard and Developer Experience (Planned)
+**Phase 3 test milestone: 93 passing backend tests.**
 
-- [ ] Build a web dashboard for policy decisions and audit events.
-- [ ] Add filtering and searching for audit history.
-- [ ] Visualize agent activity and policy outcomes.
-- [ ] Improve configuration, developer tooling, and operational visibility.
+### Phase 4 — Dashboard and Developer Experience (In Progress)
+
+- [x] **Stage 30 — Dashboard Foundation**
+  - [x] Create the dashboard folder structure.
+  - [x] Build the HTML dashboard layout.
+  - [x] Implement responsive dark-theme styling.
+  - [x] Add JavaScript initialization.
+  - [x] Preview the dashboard in GitHub Codespaces.
+  - [x] Add dashboard structure and asset tests.
+
+- [x] **Stage 31 — Audit History Viewer**
+  - [x] Serve the dashboard through FastAPI.
+  - [x] Add audit history loading states.
+  - [x] Add an audit API key input form.
+  - [x] Connect the dashboard to the authenticated `/audit` endpoint.
+  - [x] Display real SQLite audit records.
+  - [x] Handle authentication and retrieval errors.
+  - [x] Add dashboard integration checks.
+  - [x] Commit and push the completed feature.
+
+- [ ] **Stage 32 — Audit Integrity Verification Interface**
+  - [ ] Connect the dashboard to `/audit/verify`.
+  - [ ] Display valid, invalid, and unsigned signature counts.
+  - [ ] Present verification outcomes clearly.
+  - [ ] Add verification interface tests.
+
+- [ ] **Stage 33 — Agent Activity Visualizations**
+  - [ ] Explore useful audit activity summaries.
+  - [ ] Visualize permitted and denied actions.
+  - [ ] Add dashboard activity indicators.
+  - [ ] Expand dashboard functionality and tests.
+
+- [ ] **Stage 34 — Dashboard Security and Testing**
+  - [ ] Review dashboard authentication and credential handling.
+  - [ ] Expand frontend and API integration tests.
+  - [ ] Improve failure handling and security messaging.
+  - [ ] Review dashboard accessibility and operational limitations.
+
+- [ ] **Stage 35 — Documentation and v0.4.0 Release**
+  - [ ] Update project documentation.
+  - [ ] Review Phase 4 features and limitations.
+  - [ ] Run the complete test suite.
+  - [ ] Prepare and publish the next release.
+
+**Latest Phase 4 test milestone: 99 passing backend tests.**
 
 ### Longer-Term Research Directions
 
-- [ ] Investigate integrations with real AI agent tool calls and enforcement boundaries.
-- [ ] Explore stronger identity and key-management mechanisms.
-- [ ] Investigate hash chaining, external anchoring, and techniques for detecting missing audit records.
-- [ ] Extend policy administration and verification workflows.
+- [ ] Explore integration with real AI agent tool calls.
+- [ ] Investigate stronger identity and key management.
+- [ ] Explore hash chaining and externally anchored audit records.
+- [ ] Investigate detection of missing or deleted audit events.
+- [ ] Expand policy administration capabilities.
+- [ ] Improve operational monitoring and developer tooling.
 
-These are research directions, not implemented or promised capabilities.
+Features listed as planned are not yet implemented.
+
+## Intended Purpose
+
+BURHAN is currently intended for:
+
+- Portfolio demonstration and professional evaluation.
+- Research into AI agent security architecture.
+- Exploring permission-based authorization.
+- Demonstrating persistent decision auditing.
+- Developing experimental audit integrity mechanisms.
+- Studying secure dashboard integration with authenticated backend APIs.
+- Incremental testing of agent accountability mechanisms.
+
+These descriptions explain the project's purpose and do not grant third parties permission to use the software.
+
+## Responsible Development
+
+Future development will prioritize safer authentication workflows, clearer audit verification, stronger operational controls, and continued testing.
+
+Security concerns may be reported to the repository owner through an appropriate private communication channel.
 
 ## Copyright and Usage
 
@@ -459,4 +853,6 @@ The project may be licensed under different terms in the future. Until such term
 
 ### Disclaimer
 
-BURHAN is experimental software provided for demonstration purposes. No warranty is made regarding its reliability, security, or suitability for any particular purpose.
+BURHAN is experimental software provided for demonstration purposes.
+
+No warranty is made regarding its reliability, security, or suitability for any particular purpose.
