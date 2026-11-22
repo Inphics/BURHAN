@@ -130,3 +130,40 @@ def test_dashboard_javascript_uses_authenticated_audit_api():
     # Credentials must not be saved to browser storage.
     assert "localStorage" not in javascript
     assert "sessionStorage" not in javascript
+
+
+def test_dashboard_verification_updates_summary_cards():
+    """Check that audit verification is connected to dashboard cards."""
+
+    dashboard_directory = (
+        Path(__file__).resolve().parents[1]
+        / "app"
+        / "dashboard"
+    )
+
+    javascript = (
+        dashboard_directory / "script.js"
+    ).read_text(encoding="utf-8")
+
+    # Verification must call the protected backend endpoint.
+    assert 'fetch("/audit/verify?limit=100"' in javascript
+    assert '"X-API-Key": activeAuditApiKey' in javascript
+
+    # Summary card elements must be declared before they are updated.
+    card_ids = {
+        "totalRecords": "total-records",
+        "validRecords": "valid-records",
+        "invalidRecords": "invalid-records",
+        "unsignedRecords": "unsigned-records",
+    }
+
+    for variable, element_id in card_ids.items():
+        declaration = (
+            f'const {variable} = '
+            f'document.getElementById("{element_id}");'
+        )
+        update = f"{variable}.textContent = String(data."
+
+        assert declaration in javascript
+        assert update in javascript
+        assert javascript.index(declaration) < javascript.index(update)
