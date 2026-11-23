@@ -167,3 +167,58 @@ def test_dashboard_verification_updates_summary_cards():
         assert declaration in javascript
         assert update in javascript
         assert javascript.index(declaration) < javascript.index(update)
+
+def test_dashboard_contains_agent_activity_charts():
+    """Ensure both Agent Activity chart containers exist."""
+
+    dashboard_directory = (
+        Path(__file__).resolve().parents[1]
+        / "app"
+        / "dashboard"
+    )
+
+    html = (
+        dashboard_directory / "index.html"
+    ).read_text(encoding="utf-8")
+
+    assert 'id="activity-heading"' in html
+    assert 'id="decision-chart"' in html
+    assert 'id="agent-chart"' in html
+
+    assert "Allowed vs. Denied Actions" in html
+    assert "Activity by Agent" in html
+
+def test_dashboard_agent_activity_javascript():
+    """Check chart rendering and authenticated audit data integration."""
+
+    dashboard_directory = (
+        Path(__file__).resolve().parents[1]
+        / "app"
+        / "dashboard"
+    )
+
+    javascript = (
+        dashboard_directory / "script.js"
+    ).read_text(encoding="utf-8")
+
+    # Both activity calculations must exist.
+    assert "function calculateDecisionCounts(events)" in javascript
+    assert "function calculateAgentActivity(events)" in javascript
+
+    # Both chart renderers must exist.
+    assert "function renderDecisionChart(events)" in javascript
+    assert "function renderAgentChart(events)" in javascript
+
+    # Chart values must use safe text rendering.
+    assert "label.textContent" in javascript
+
+    # Charts must update after authenticated audit data loads.
+    assert "renderDecisionChart(loadedAuditEvents);" in javascript
+    assert "renderAgentChart(loadedAuditEvents);" in javascript
+
+    # Clear old chart data before making another request.
+    assert "renderDecisionChart([]);" in javascript
+    assert "renderAgentChart([]);" in javascript
+
+    # Handle singular and plural event labels.
+    assert 'item.count === 1 ? "event" : "events"' in javascript

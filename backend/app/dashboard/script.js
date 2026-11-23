@@ -35,6 +35,159 @@ document.addEventListener("DOMContentLoaded", function () {
     // Do not persist credentials in browser storage.
     let activeAuditApiKey = null;
 
+    // Keep the most recently loaded audit records for activity charts.
+    let loadedAuditEvents = [];
+
+    // Calculate policy decisions from the loaded audit records.
+    function calculateDecisionCounts(events) {
+        let allowed = 0;
+        let denied = 0;
+
+        events.forEach(function (event) {
+            if (event.allowed === true) {
+                allowed += 1;
+            } else if (event.allowed === false) {
+                denied += 1;
+            }
+        });
+
+        return {
+            allowed: allowed,
+            denied: denied,
+            total: allowed + denied,
+        };
+    }
+
+    /**
+     * Count audit events for each agent.
+     * These are event counts, not unique requests.
+     */
+    function calculateAgentActivity(events) {
+        const counts = new Map();
+
+        events.forEach(function (event) {
+            const agent = (
+                typeof event.agent === "string" &&
+                event.agent.trim()
+            )
+                ? event.agent
+                : "Unknown agent";
+
+            counts.set(agent, (counts.get(agent) || 0) + 1);
+        });
+
+        return Array.from(counts.entries())
+            .map(function ([agent, count]) {
+                return {
+                    agent: agent,
+                    count: count,
+                };
+            })
+            .sort(function (a, b) {
+                return b.count - a.count ||
+                    a.agent.localeCompare(b.agent);
+            });
+    }
+
+    /**
+     * Display a horizontal bar chart of audit activity by agent.
+     * Counts represent audit events, not unique requests.
+     */
+    function renderAgentChart(events) {
+        const chart = document.getElementById("agent-chart");
+
+        if (!chart) {
+            return;
+        }
+
+        const agents = calculateAgentActivity(events);
+        chart.replaceChildren();
+
+        if (agents.length === 0) {
+            const message = document.createElement("p");
+            message.textContent = "No agent activity available.";
+            chart.appendChild(message);
+            return;
+        }
+
+        const highestCount = agents[0].count;
+
+        agents.forEach(function (item) {
+            const percentage = (item.count / highestCount) * 100;
+
+            const row = document.createElement("div");
+            row.className = "activity-bar-row";
+
+            const label = document.createElement("p");
+            label.textContent = `${item.agent}: ${item.count} ${item.count === 1 ? "event" : "events"}`;
+
+            const track = document.createElement("div");
+            track.className = "activity-bar-track";
+
+            const bar = document.createElement("div");
+            bar.className = "activity-bar";
+            bar.style.width = `${percentage}%`;
+
+            track.appendChild(bar);
+            row.appendChild(label);
+            row.appendChild(track);
+            chart.appendChild(row);
+        });
+    }
+
+    /**
+     * Display an accessible, text-based decision chart.
+     * Counts represent audit events, not unique requests.
+     */
+    function renderDecisionChart(events) {
+        const chart = document.getElementById("decision-chart");
+        if (!chart) {
+            return;
+        }
+
+        const counts = calculateDecisionCounts(events);
+        chart.replaceChildren();
+
+        if (counts.total === 0) {
+            const message = document.createElement("p");
+            message.textContent = "No decision activity available.";
+            chart.appendChild(message);
+            return;
+        }
+
+        const categories = [
+            { label: "Allowed", count: counts.allowed },
+            { label: "Denied", count: counts.denied },
+        ];
+
+        categories.forEach(function (category) {
+            const percentage = (category.count / counts.total) * 100;
+
+            const row = document.createElement("div");
+            row.className = "activity-bar-row";
+
+            const label = document.createElement("p");
+            label.textContent =
+                `${category.label}: ${category.count} (${percentage.toFixed(1)}%)`;
+
+            const track = document.createElement("div");
+            track.className = "activity-bar-track";
+
+            const bar = document.createElement("div");
+            bar.className = "activity-bar";
+            bar.style.width = `${percentage}%`;
+
+            if (category.label === "Denied") {
+                bar.classList.add("activity-bar-denied");
+            }
+
+            track.appendChild(bar);
+            row.appendChild(label);
+            row.appendChild(track);
+            chart.appendChild(row);
+        });
+    }
+
     // Verification API integration is being prepared.
     verifyButton.disabled = false;
 
@@ -191,6 +344,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
         // Clear previous records before requesting new data.
         showEmptyAuditTable();
+        loadedAuditEvents = [];
+        renderDecisionChart([]);
+        renderAgentChart([]);
 
         if (!apiKey.trim()) {
             setAuditHistoryStatus("unauthorized");
@@ -225,7 +381,12 @@ document.addEventListener("DOMContentLoaded", function () {
                 return;
             }
 
-            displayAuditRecords(data.events);
+            // Store authenticated audit records for activity visualizations.
+            loadedAuditEvents = data.events;
+
+            displayAuditRecords(loadedAuditEvents);
+            renderDecisionChart(loadedAuditEvents);
+            renderAgentChart(loadedAuditEvents);
             setAuditHistoryStatus("loaded");
 
         } catch (error) {
