@@ -222,3 +222,63 @@ def test_dashboard_agent_activity_javascript():
 
     # Handle singular and plural event labels.
     assert 'item.count === 1 ? "event" : "events"' in javascript
+
+def test_dashboard_and_audit_security_headers():
+    """Ensure dashboard and protected audit responses include security headers."""
+
+    from fastapi.testclient import TestClient
+    from backend.app.main import app
+
+    client = TestClient(app)
+
+    for path in ["/dashboard/", "/audit", "/audit/verify"]:
+        response = client.get(path)
+
+        assert response.headers["X-Content-Type-Options"] == "nosniff"
+        assert response.headers["Referrer-Policy"] == "no-referrer"
+
+        if path.startswith("/audit"):
+            assert response.headers["Cache-Control"] == "no-store"
+
+def test_dashboard_security_regressions():
+    """Check key frontend security protections remain in place."""
+
+    dashboard_directory = (
+        Path(__file__).resolve().parents[1]
+        / "app"
+        / "dashboard"
+    )
+
+    javascript = (
+        dashboard_directory / "script.js"
+    ).read_text(encoding="utf-8")
+
+    # Do not persist credentials in browser storage.
+    assert "localStorage" not in javascript
+    assert "sessionStorage" not in javascript
+
+    # Avoid inserting untrusted audit values as HTML.
+    unsafe_operations = [
+        "innerHTML",
+        "outerHTML",
+        "insertAdjacentHTML",
+        "document.write(",
+        "eval(",
+    ]
+
+    for operation in unsafe_operations:
+        assert operation not in javascript
+
+    assert "cell.textContent = String(value)" in javascript
+
+    # Previous authentication must be invalidated on reload.
+    assert "activeAuditApiKey = null;" in javascript
+
+    # Previous verification summaries must be cleared.
+    for variable in (
+        "totalRecords",
+        "validRecords",
+        "invalidRecords",
+        "unsignedRecords",
+    ):
+        assert f'{variable}.textContent = "—";' in javascript

@@ -127,17 +127,20 @@
                     </button>
                 </form>
 
-                <div class="table-container">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Request ID</th>
-                                <th>Agent</th>
-                                <th>Action</th>
-                                <th>Decision</th>
-                                <th>Execution</th>
-                            </tr>
-                        </thead>
+    <div class="table-container">
+        <table>
+            <caption class="visually-hidden">
+                Recent agent audit records and their policy decisions
+            </caption>
+            <thead>
+                <tr>
+                    <th scope="col">Request ID</th>
+                    <th scope="col">Agent</th>
+                    <th scope="col">Action</th>
+                    <th scope="col">Decision</th>
+                    <th scope="col">Execution</th>
+                </tr>
+            </thead>
 
                         <tbody id="audit-records">
                             <tr>

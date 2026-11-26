@@ -22,6 +22,20 @@ app = FastAPI(
     version="0.3.0",
 )
 
+@app.middleware("http")
+async def add_security_headers(request, call_next):
+    """Apply basic security headers to dashboard and API responses."""
+    response = await call_next(request)
+
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["Referrer-Policy"] = "no-referrer"
+
+    # Prevent sensitive audit responses from being cached.
+    if request.url.path in {"/audit", "/audit/verify"}:
+        response.headers["Cache-Control"] = "no-store"
+
+    return response
+
 dashboard_directory = Path(__file__).resolve().parent / "dashboard"
 
 app.mount(

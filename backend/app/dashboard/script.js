@@ -221,6 +221,18 @@ document.addEventListener("DOMContentLoaded", function () {
                 return;
             }
 
+            if (response.status === 403) {
+                verificationResult.textContent =
+                    "Audit verification is disabled or not configured on the server.";
+                return;
+            }
+
+            if (response.status === 429) {
+                verificationResult.textContent =
+                    "Too many requests. Please try again later.";
+                return;
+            }
+
             if (!response.ok) {
                 verificationResult.textContent =
                     "Audit verification is temporarily unavailable.";
@@ -340,13 +352,24 @@ document.addEventListener("DOMContentLoaded", function () {
 
         const apiKey = auditApiKeyInput.value;
         auditApiKeyInput.value = "";
-        activeAuditApiKey = apiKey.trim() ? apiKey : null;
+
+        // Invalidate previously authenticated access when a new request begins.
+        activeAuditApiKey = null;
 
         // Clear previous records before requesting new data.
         showEmptyAuditTable();
         loadedAuditEvents = [];
         renderDecisionChart([]);
         renderAgentChart([]);
+
+        // Clear verification results from the previous audit session.
+        totalRecords.textContent = "—";
+        validRecords.textContent = "—";
+        invalidRecords.textContent = "—";
+        unsignedRecords.textContent = "—";
+
+        verificationResult.textContent =
+            "Load audit records, then verify their integrity.";
 
         if (!apiKey.trim()) {
             setAuditHistoryStatus("unauthorized");
@@ -380,6 +403,9 @@ document.addEventListener("DOMContentLoaded", function () {
                 setAuditHistoryStatus("unavailable");
                 return;
             }
+
+            // Retain the key only after a successful authenticated response.
+            activeAuditApiKey = apiKey;
 
             // Store authenticated audit records for activity visualizations.
             loadedAuditEvents = data.events;
