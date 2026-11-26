@@ -48,24 +48,28 @@ BURHAN is built around the idea that trustworthy AI systems should produce more 
 - **Dashboard Interface:** Provides an experimental web interface built using HTML, CSS, and JavaScript.
 - **FastAPI Integration:** Serves the dashboard through the existing FastAPI application.
 - **Responsive Design:** Includes a dark-themed layout, audit summary cards, status messages, activity charts, and an audit records table.
-- **Authenticated Audit History Viewer:** Allows an authorized user to retrieve recent audit records using the existing audit API.
+- **Authenticated Audit History Viewer:** Allows an authorized user to retrieve recent audit records through the existing audit API.
 - **Audit Integrity Verification Interface:** Connects the dashboard to the protected `/audit/verify` endpoint.
 - **Live Verification Summary Cards:** Displays total records checked, valid signatures, invalid signatures, and unsigned records.
 - **Allowed vs. Denied Actions Chart:** Visualizes the distribution of allowed and denied audit events.
 - **Activity by Agent Chart:** Displays event counts grouped by agent identity.
 - **Safe Text Rendering:** Displays audit values using DOM text operations rather than interpreting them as HTML.
 - **Loading and Error States:** Reports authentication failures, unavailable API responses, and empty activity data.
-- **Dashboard Regression Tests:** Checks dashboard HTML structure, static assets, authenticated API integration, and visualization source code.
+- **Credential Handling Improvements:** Clears the API key input, invalidates previous credentials when a new audit request begins, and retains a key for verification only after successful audit retrieval.
+- **Stale Result Prevention:** Clears previously displayed audit records, activity charts, and verification summaries when a new audit history request begins.
+- **Accessibility Improvements:** Includes descriptive headings, labelled form controls, accessible audit table headers, a screen-reader-friendly table caption, and status messages.
+- **HTTP Security Headers:** Uses FastAPI middleware to set basic response security headers and discourage caching of protected audit API responses.
+- **Dashboard Regression Tests:** Checks HTML structure, static assets, authenticated API integration, visualizations, security headers, and selected frontend security properties.
 
 **Current dashboard limitation:** The interface is functional as a development prototype, but it is not a production-grade security console. Dashboard visualizations summarize returned audit events and do not establish the integrity of the entire audit database.
 
 ### Automated Testing
 
-**102 backend tests passing** at the latest completed Stage 33 test run.
+**104 backend tests passing** at the latest completed Stage 34 test run.
 
 Tests cover policy behavior, authentication, simulated enforcement, SQLite persistence, audit integrity, API security, failure scenarios, and dashboard functionality.
 
-Dashboard source-level tests are supplemented by manual browser testing. Comprehensive browser automation and further security testing remain planned.
+Dashboard source-level regression tests are supplemented by manual browser testing. Comprehensive browser automation and a full security assessment have not been completed.
 
 ## Project Status
 
@@ -73,29 +77,68 @@ Dashboard source-level tests are supplemented by manual browser testing. Compreh
 
 BURHAN is under active research and development.
 
-The current application version is **`0.3.0`**.
+The application version has been updated to **`0.4.0`** in preparation for its next GitHub release.
 
-The project has completed its backend foundation, API hardening, and audit verification development phases.
+**Release status: v0.4.0 preparation in progress.**
 
-**Phase 4 — Dashboard and Developer Experience is in progress.**
+The existing v0.3.0 release remains part of the project's release history.
 
-Completed Phase 4 stages:
+### Development Progress
+
+The following phases are complete:
+
+- **Phase 1:** Backend Foundation
+- **Phase 2:** Documentation and Backend Hardening
+- **Phase 3:** Agent Safety and Verification Hardening
+
+**Phase 4 — Dashboard and Developer Experience** has completed five development stages:
 
 - **Stage 30:** Dashboard Foundation
-- **Stage 31:** Audit History Viewer
+- **Stage 31:** Authenticated Audit History Viewer
 - **Stage 32:** Audit Integrity Verification Interface
 - **Stage 33:** Agent Activity Visualizations
-
-Remaining stages:
-
 - **Stage 34:** Dashboard Security and Testing
-- **Stage 35:** Documentation and v0.4.0 Release
 
-BURHAN remains a research and development prototype.
+**Stage 35 — Documentation and v0.4.0 Release** is currently in progress.
 
-**It is not production-ready and should not be relied upon as the sole security boundary for real-world AI agent systems.**
+### Current Capabilities
 
-Public availability is intended for portfolio presentation and professional evaluation. It does not grant permission to use, modify, redistribute, or incorporate the source code into other projects.
+BURHAN provides:
+
+- Policy-based evaluation of authenticated AI agent actions.
+- Simulated enforcement of permitted actions.
+- Persistent SQLite audit logging.
+- Optional HMAC-SHA256 signing and integrity verification.
+- Authenticated audit history and verification APIs.
+- A browser-based dashboard displaying audit records and verification summaries.
+- Allowed vs. Denied Actions visualizations.
+- Activity by Agent visualizations.
+- Basic HTTP security headers for dashboard and API responses.
+- Improved dashboard credential handling and error reporting.
+- Accessible audit table headings and descriptions.
+- Automated backend and dashboard regression tests.
+
+**Latest completed test milestone: 104 passing tests.**
+
+### Security and Production Readiness
+
+BURHAN remains an experimental research and development prototype.
+
+The framework does not yet execute or intercept real external AI agent tool calls.
+
+Its dashboard uses API-key authentication and is intended for trusted development and demonstration environments.
+
+HMAC verification can detect changes to inspected signed audit fields, but it cannot prove that records have not been deleted, reordered, or replaced.
+
+Activity visualizations summarize returned audit events rather than necessarily representing unique agent requests or complete historical activity.
+
+The current dashboard includes basic security improvements, but it does not provide production-grade authentication sessions, comprehensive browser security controls, or a complete security monitoring platform.
+
+**BURHAN is not production-ready and must not be relied upon as the sole security boundary for real-world AI agent systems.**
+
+Public availability is intended for portfolio presentation and professional evaluation. It does not grant permission to use, modify, redistribute, or incorporate BURHAN's source code into other projects.
+
+See [Copyright and Usage](#copyright-and-usage) for the project's proprietary licensing terms.
 
 ## Architecture
 
@@ -105,7 +148,7 @@ BURHAN combines a FastAPI backend with a lightweight browser-based dashboard.
 
 | Component | Location | Responsibility |
 |---|---|---|
-| FastAPI Application | `backend/app/main.py` | API endpoints, request handling, and dashboard serving |
+| FastAPI Application | `backend/app/main.py` | API endpoints, security middleware, request handling, and dashboard serving |
 | Agent Authentication | `backend/app/security/agent_auth.py` | Resolves agent identities from configured API keys |
 | Policy Engine | `backend/app/policies/policy_engine.py` | Loads and evaluates agent permissions |
 | Policy Configuration | `backend/config/policies.json` | Defines permitted actions |
@@ -115,8 +158,8 @@ BURHAN combines a FastAPI backend with a lightweight browser-based dashboard.
 | Audit Database | `backend/app/evaluation/audit_database.py` | Stores and retrieves SQLite audit records |
 | Audit Integrity | `backend/app/evaluation/audit_integrity.py` | Calculates and verifies audit signatures |
 | Dashboard HTML | `backend/app/dashboard/index.html` | Defines dashboard structure and visualization containers |
-| Dashboard CSS | `backend/app/dashboard/style.css` | Controls dashboard appearance and chart styling |
-| Dashboard JavaScript | `backend/app/dashboard/script.js` | Handles authenticated audit retrieval, verification, and activity charts |
+| Dashboard CSS | `backend/app/dashboard/style.css` | Controls dashboard appearance, accessibility styling, and charts |
+| Dashboard JavaScript | `backend/app/dashboard/script.js` | Handles authenticated audit retrieval, verification, activity charts, and frontend state |
 
 ### Backend Request Flow
 
@@ -279,7 +322,7 @@ Never commit actual API keys or HMAC signing secrets to the repository.
 
 For persistent development credentials, use GitHub Codespaces secrets rather than storing keys in source files.
 
-The development environment currently uses these four secret names:
+The development environment uses these four secret names:
 
 ```text
 BURHAN_AUDIT_HMAC_KEY
@@ -318,8 +361,13 @@ The switches `BURHAN_ENABLE_AUDIT_API` and `BURHAN_REQUIRE_AUDIT_SIGNING` are co
 From the project root:
 
 ```bash
+export BURHAN_ENABLE_AUDIT_API=true
+export BURHAN_REQUIRE_AUDIT_SIGNING=true
+
 python -m uvicorn backend.app.main:app --reload --host 127.0.0.1 --port 8000
 ```
+
+The configuration above assumes the relevant API keys and HMAC key are already available as environment variables.
 
 Local addresses:
 
@@ -368,7 +416,7 @@ GET /audit?limit=100
 
 It includes the Audit API Key in the `X-API-Key` header.
 
-If authentication succeeds, the dashboard displays the returned records and updates the two Agent Activity charts.
+If authentication succeeds and a valid response is received, the dashboard displays the returned records and updates the two Agent Activity charts.
 
 If the key is incorrect, it displays an authentication failure message.
 
@@ -437,7 +485,7 @@ python -m pytest backend/tests/ -q
 
 Latest completed test result:
 
-**102 tests passed.**
+**104 tests passed.**
 
 The count may increase as development continues.
 
@@ -487,7 +535,7 @@ Permission changes performed using the engine's `grant_permission()` and `revoke
 | `POST` | `/evaluate` | Evaluates agent permissions | Agent API key |
 | `POST` | `/enforce` | Evaluates and simulates permitted actions | Agent API key |
 | `GET` | `/audit` | Returns stored audit records | Audit API key |
-| `GET` | `/audit/verify` | Verifies stored audit signatures | Audit API key and server-side HMAC key |
+| `GET` | `/audit/verify` | Verifies stored audit signatures | Audit API key; verification uses server-side HMAC key |
 | `GET` | `/dashboard/` | Serves the dashboard interface | Static page; audit data remains protected |
 
 ### POST /evaluate
@@ -663,11 +711,11 @@ backend/app/dashboard/
 
 **`index.html` — Structure**
 
-Defines the dashboard sections, summary cards, audit history table, verification controls, activity chart containers, and API key form.
+Defines dashboard sections, summary cards, the audit history table, verification controls, activity chart containers, and the API key form.
 
 **`style.css` — Appearance**
 
-Provides dark-themed styling, responsive layouts, tables, buttons, spacing, typography, and horizontal chart bars.
+Provides dark-themed styling, responsive layouts, tables, buttons, spacing, typography, horizontal chart bars, and screen-reader-friendly hidden text.
 
 **`script.js` — Behaviour**
 
@@ -699,14 +747,14 @@ The API returns signature verification results, which populate four summary card
 
 | Card | Meaning |
 |---|---|
-| Total Records | Number of records checked in the returned verification batch |
+| Total Audit Records | Number of records checked in the returned verification batch |
 | Valid Signatures | Number of signatures matching the current HMAC key |
 | Invalid Signatures | Number of signatures that fail verification |
 | Unsigned Records | Number of records without HMAC signatures |
 
 The interface also displays a textual verification summary.
 
-The HMAC secret is never transmitted to the browser.
+The HMAC secret is not transmitted to the browser.
 
 **Security limitation:** These counters describe the returned verification batch, not the entire stored audit history.
 
@@ -759,7 +807,7 @@ They do not issue separate network requests.
 
 The data is temporarily held in JavaScript memory.
 
-When a new audit history request begins, the previous chart data is cleared.
+When a new audit history request begins, previous chart data is cleared.
 
 If no records are available, the interface displays appropriate empty-data messages.
 
@@ -773,6 +821,141 @@ Additionally, pre-execution audit events may use `allowed: false` as a pending-s
 
 Consequently, the Allowed vs. Denied chart should not be interpreted as a definitive count of unique policy decisions without additional event-state filtering.
 
+### Dashboard Security Improvements
+
+Stage 34 introduced several additional safeguards.
+
+#### 1. Credential Handling
+
+The dashboard accepts the Audit API Key through a password input.
+
+The key is sent to protected endpoints through the `X-API-Key` header rather than being placed in the request URL.
+
+When an audit history request begins:
+
+1. The dashboard reads the entered key.
+2. It clears the password input field.
+3. It invalidates the previously retained key.
+4. It requests authenticated audit history.
+5. It retains the new key in memory only after a successful response containing the expected audit event structure.
+
+The retained key can then be reused for audit integrity verification.
+
+The dashboard does not deliberately save the key in browser storage.
+
+**Limitation:** The key is still handled by JavaScript and temporarily retained in page memory. This is not equivalent to a production authentication session.
+
+#### 2. Verification Error Handling
+
+The verification interface distinguishes several failure cases.
+
+| Condition | Dashboard Behaviour |
+|---|---|
+| Missing retained Audit API Key | Requests that the user load audit records first |
+| HTTP `401` | Reports an authentication failure and invalidates the retained key |
+| HTTP `403` | Reports that verification is disabled or not configured |
+| HTTP `429` | Displays a rate-limit-related message |
+| Other unsuccessful HTTP responses | Reports temporary unavailability |
+| Unexpected response structure | Reports an invalid verification response |
+| Network or JavaScript processing error | Displays a connection-related error message |
+
+Handling HTTP `429` in the frontend does not mean BURHAN currently implements rate limiting.
+
+These messages improve troubleshooting but do not replace proper server-side security controls.
+
+#### 3. Stale Result Prevention
+
+When a new audit history request begins, BURHAN clears:
+
+- Previously displayed audit records.
+- The Allowed vs. Denied Actions chart.
+- The Activity by Agent chart.
+- Previous verification summary counts.
+- The previous verification result message.
+
+This reduces the risk of displaying results from an earlier authenticated request as though they belong to the current request.
+
+**Limitation:** This reset does not itself guarantee safe handling of every possible overlapping or out-of-order asynchronous request. More comprehensive request-state handling remains a future improvement.
+
+#### 4. Safe DOM Rendering
+
+Audit records and chart labels are rendered using DOM text operations such as `textContent`.
+
+This prevents those values from being interpreted as HTML by the browser.
+
+The dashboard avoids common unsafe HTML insertion patterns in its reviewed JavaScript source.
+
+**Limitation:** Source-level checks are not a complete cross-site scripting security assessment.
+
+#### 5. Accessibility Improvements
+
+The dashboard includes:
+
+- A clear heading hierarchy.
+- Descriptive form labels.
+- Named buttons.
+- Status messages using `role="status"`.
+- A labelled Agent Activity section.
+- A descriptive audit table caption.
+- Explicit `scope="col"` attributes for audit table column headers.
+- Visually hidden text that remains available to assistive technologies.
+
+These improvements support accessibility but do not establish compliance with a complete accessibility standard.
+
+#### 6. HTTP Security Headers
+
+The FastAPI application applies basic security headers through HTTP middleware.
+
+| Header | Value | Purpose |
+|---|---|---|
+| `X-Content-Type-Options` | `nosniff` | Reduces MIME-type sniffing risks |
+| `Referrer-Policy` | `no-referrer` | Prevents referrer information from being sent |
+| `Cache-Control` | `no-store` | Discourages caching of protected audit API responses |
+
+The `Cache-Control: no-store` header is applied to:
+
+```text
+/audit
+/audit/verify
+```
+
+The `nosniff` and `no-referrer` headers are applied to the application responses handled by the middleware, including dashboard and audit API responses.
+
+The middleware was checked using FastAPI's test client, including responses where audit access was disabled.
+
+**Limitations:**
+
+- These headers do not replace HTTPS.
+- A comprehensive Content Security Policy has not been implemented.
+- The current middleware does not establish a complete browser security policy.
+- Static dashboard assets are not all assigned the same no-store policy as protected audit responses.
+
+### Dashboard Security and Testing
+
+Stage 34 expanded the project's security checks.
+
+The automated tests now include checks for:
+
+- Security headers on dashboard and protected audit responses.
+- Selected credential-handling properties in the dashboard JavaScript source.
+- Avoidance of browser storage APIs for credentials.
+- Avoidance of selected unsafe HTML insertion patterns.
+- Text-based rendering of audit fields.
+- Credential invalidation logic.
+- Verification summary reset logic.
+
+The dashboard was also manually tested to confirm:
+
+1. Valid authentication loads audit records.
+2. Integrity verification updates the summary cards.
+3. Both activity charts display returned audit data.
+4. An incorrect API key produces an authentication failure.
+5. Previous records, activity charts, and verification summaries clear when a new audit history request begins.
+
+**Latest completed test milestone: 104 passing tests.**
+
+These tests provide useful regression coverage but are not a penetration test, a complete security assessment, or comprehensive automated browser testing.
+
 ### Current Dashboard Limitations
 
 - The dashboard is a development prototype, not a production operations console.
@@ -781,12 +964,13 @@ Consequently, the Allowed vs. Denied chart should not be interpreted as a defini
 - Activity counts represent audit events rather than unique requests.
 - The charts do not currently provide advanced filtering or time-based analysis.
 - The dashboard relies on an API key entered through a browser form.
-- It does not provide production-grade user sessions or identity management.
+- The Audit API Key is temporarily retained in JavaScript memory after successful authentication.
+- The dashboard does not provide production-grade user sessions or identity management.
 - The frontend does not independently verify HMAC signatures.
 - Successful signature checks do not prove that records have not been deleted.
-- Comprehensive frontend security testing and automated browser coverage are still planned.
-
-These areas will be reviewed during Stage 34 and later development.
+- More comprehensive request-concurrency handling remains unimplemented.
+- A complete Content Security Policy has not been introduced.
+- Comprehensive frontend security assessment and automated browser coverage remain future work.
 
 ## Enforcement Audit Safeguards
 
@@ -904,6 +1088,10 @@ BURHAN does not yet provide comprehensive rate limiting, monitoring, external ap
 
 A failed final audit write may leave the recorded outcome incomplete after simulated execution.
 
+**12. Limited Browser Security Hardening**
+
+Basic HTTP security headers and selected frontend safeguards have been implemented, but a comprehensive Content Security Policy, hardened browser sessions, and full frontend security testing remain outstanding.
+
 **BURHAN remains experimental software and should not be used as the sole security boundary for production AI agents or sensitive systems.**
 
 ## Development Roadmap
@@ -978,27 +1166,38 @@ BURHAN is developed incrementally, emphasizing clear architecture, testing, and 
   - [x] Create responsive activity chart styling.
   - [x] Reuse authenticated audit history data.
   - [x] Calculate allowed and denied audit event counts.
-  - [x] Display Allowed vs. Denied Actions chart.
+  - [x] Display the Allowed vs. Denied Actions chart.
   - [x] Calculate audit activity by agent.
-  - [x] Display Activity by Agent chart.
+  - [x] Display the Activity by Agent chart.
   - [x] Connect both charts to real audit records.
   - [x] Handle empty activity data and clear stale results.
   - [x] Correct singular and plural event labels.
   - [x] Add visualization regression tests.
 
-- [ ] **Stage 34 — Dashboard Security and Testing**
-  - [ ] Review dashboard authentication and credential handling.
-  - [ ] Expand frontend and API integration tests.
-  - [ ] Improve failure handling and security messaging.
-  - [ ] Review dashboard accessibility and operational limitations.
+- [x] **Stage 34 — Dashboard Security and Testing**
+  - [x] Review dashboard security and credential handling.
+  - [x] Retain Audit API Keys only after successful authenticated retrieval.
+  - [x] Improve verification error handling.
+  - [x] Clear outdated audit records, charts, and verification summaries.
+  - [x] Review safe DOM rendering and XSS-related patterns.
+  - [x] Improve dashboard table accessibility.
+  - [x] Add baseline FastAPI HTTP security headers.
+  - [x] Apply no-store caching instructions to protected audit API responses.
+  - [x] Add automated HTTP security-header tests.
+  - [x] Add dashboard security regression tests.
+  - [x] Complete manual dashboard and browser checks.
 
 - [ ] **Stage 35 — Documentation and v0.4.0 Release**
-  - [ ] Update project documentation.
-  - [ ] Review Phase 4 features and limitations.
-  - [ ] Run the complete test suite.
-  - [ ] Prepare and publish the next release.
+  - [x] Verify repository state and existing test baseline.
+  - [x] Review application version references.
+  - [x] Update the FastAPI application version to `0.4.0`.
+  - [x] Finalize README documentation for the completed Phase 4 features.
+  - [ ] Review project security limitations and release documentation.
+  - [ ] Run the complete test suite and final release checks.
+  - [ ] Prepare the release changes.
+  - [ ] Publish and verify the GitHub `v0.4.0` release.
 
-**Latest Phase 4 test milestone: 102 passing backend tests.**
+**Latest Phase 4 test milestone: 104 passing backend tests.**
 
 ### Longer-Term Research Directions
 
@@ -1008,6 +1207,9 @@ BURHAN is developed incrementally, emphasizing clear architecture, testing, and 
 - [ ] Investigate detection of missing or deleted audit events.
 - [ ] Expand policy administration capabilities.
 - [ ] Improve operational monitoring and developer tooling.
+- [ ] Investigate safer browser authentication workflows.
+- [ ] Add comprehensive automated browser and accessibility testing.
+- [ ] Explore stronger audit verification and data provenance mechanisms.
 
 Features listed as planned are not yet implemented.
 

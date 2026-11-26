@@ -19,7 +19,7 @@ from backend.app.policies.policy_engine import PolicyEngine
 app = FastAPI(
     title="BURHAN API",
     description="Autonomous AI Agent Safety & Verification Framework",
-    version="0.3.0",
+    version="0.4.0",
 )
 
 @app.middleware("http")
@@ -57,7 +57,7 @@ class ActionRequest(BaseModel):
 def home():
     return {
         "project": "BURHAN",
-        "version": "0.3.0",
+        "version": "0.4.0",
         "status": "running",
         "description": "Autonomous AI Agent Safety & Verification Framework",
     }
